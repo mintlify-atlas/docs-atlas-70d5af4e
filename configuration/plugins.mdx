@@ -1,0 +1,65 @@
+---
+title: "Plugins"
+description: "Enable and manage draw.io plugins in the desktop app."
+---
+
+draw.io Desktop supports the same plugin system as the draw.io web application. Plugins are JavaScript files that extend the editor with custom shapes, behaviors, or integrations.
+
+<Warning>
+Plugins are disabled by default. Enabling plugins allows locally stored JavaScript files to run inside the app. Only enable plugins if you trust the source of every plugin you install.
+</Warning>
+
+## Enabling plugins
+
+Plugins are off by default and must be explicitly enabled with the `--enable-plugins` flag when launching the app.
+
+<Tabs>
+  <Tab title="macOS / Linux">
+    ```bash
+    drawio --enable-plugins
+    ```
+  </Tab>
+  <Tab title="Windows">
+    ```powershell
+    drawio.exe --enable-plugins
+    ```
+  </Tab>
+</Tabs>
+
+There is no in-app toggle for this flag. If you want plugins enabled on every launch, add `--enable-plugins` to your desktop shortcut or launch script.
+
+## Plugin storage location
+
+When plugins are enabled, draw.io loads plugins from:
+
+| Platform | Path |
+|----------|------|
+| macOS | `~/Library/Application Support/draw.io/plugins/` |
+| Windows | `%APPDATA%\draw.io\plugins\` |
+| Linux | `~/.config/draw.io/plugins/` |
+
+Place `.js` plugin files in this directory. draw.io will load them automatically on the next launch (with `--enable-plugins` active).
+
+## Security model
+
+draw.io Desktop enforces a strict Content Security Policy that blocks file access from any path outside the app's own code directory. When plugins are disabled, attempting to load a file from the plugins directory is blocked and logged.
+
+When you pass `--enable-plugins`, the app adds the plugins directory as an additional trusted source. Files outside both the app code directory and the plugins directory are still blocked.
+
+```text
+Allowed (plugins enabled):
+  file://<app-code-dir>/**
+  file://<app-data-dir>/plugins/**
+
+Blocked always:
+  file:// paths outside the above two roots
+  All remote script sources
+```
+
+<Note>
+The draw.io Desktop plugin system is compatible with plugins written for the draw.io web app. Refer to the [draw.io plugin documentation](https://www.drawio.com/doc/faq/plugins) for details on the plugin API and available examples.
+</Note>
+
+## Disabling plugins
+
+Stop passing `--enable-plugins` at launch. Existing plugin files in the plugins directory are not deleted, but they will not be loaded.

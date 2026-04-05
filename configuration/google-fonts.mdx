@@ -1,0 +1,55 @@
+---
+title: "Google Fonts"
+description: "Enable Google Fonts in draw.io Desktop to access a wider font selection."
+---
+
+By default, draw.io Desktop does not connect to any external font services. This keeps the app fully functional without a network connection and avoids sending any data to third-party servers.
+
+Google Fonts support is an opt-in feature. When enabled, the app connects to `fonts.googleapis.com` and `fonts.gstatic.com` to load fonts on demand.
+
+<Warning>
+Enabling Google Fonts breaks network isolation. The app will make outbound connections to Google servers whenever a diagram uses a Google Font. If you operate in an air-gapped environment or require that no data leaves the machine, keep this setting disabled.
+</Warning>
+
+## How to enable Google Fonts
+
+<Steps>
+  <Step title="Open the settings menu">
+    In draw.io Desktop, open the **Extras** menu and select **Edit Diagram** or navigate to the settings via the application menu. The Google Fonts toggle is available in the app's settings panel.
+  </Step>
+  <Step title="Toggle Google Fonts on">
+    Enable the **Google Fonts** option. The preference is saved immediately and persists across restarts.
+  </Step>
+  <Step title="Restart the app">
+    The Content Security Policy is applied at startup. Restart draw.io Desktop for the change to take effect.
+  </Step>
+</Steps>
+
+<Note>
+The preference is stored as `isGoogleFontsEnabled` in electron-store. You can also set `"isGoogleFontsEnabled": 1` in a [`urlParams.json`](/configuration/settings#the-urlparamsjson-file) file to enable it at the system level for all users on the machine.
+</Note>
+
+## What changes when Google Fonts is enabled
+
+draw.io Desktop enforces a Content Security Policy (CSP) on all web content. When Google Fonts is disabled, the CSP blocks all connections except to the app's own local files.
+
+When Google Fonts is enabled, the CSP is relaxed to permit two additional origins:
+
+| Directive | Added origin |
+|-----------|-------------|
+| `connect-src` | `https://fonts.googleapis.com`, `https://fonts.gstatic.com` |
+| `style-src` | `https://fonts.googleapis.com` |
+
+All other CSP directives remain unchanged. Remote script execution and connections to any other external origin are still blocked.
+
+## Default behavior
+
+| Setting | Default |
+|---------|---------|
+| `isGoogleFontsEnabled` | `false` (disabled) |
+| Network connections to Google | None |
+| Font availability | System fonts and built-in draw.io fonts only |
+
+## Disabling Google Fonts
+
+Toggle Google Fonts off in the settings menu, then restart the app. The CSP reverts to its default, blocking all connections to `fonts.googleapis.com` and `fonts.gstatic.com`.

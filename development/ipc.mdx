@@ -1,0 +1,289 @@
+---
+title: "IPC communication"
+description: "How the draw.io renderer and the Electron main process communicate through the preload script bridge."
+---
+
+Because the renderer has no direct Node.js access, all OS interaction goes through a structured IPC protocol. The preload script (`src/main/electron-preload.js`) is the only crossing point between the two worlds.
+
+## Overview
+
+```text
+Renderer (draw.io web app)
+    │  window.electron.request(...)
+    ▼
+Preload script (electron-preload.js)
+    │  ipcRenderer.send('rendererReq', msg)
+    ▼
+Main process (electron.js)
+    │  ipcMain.on('rendererReq', ...)
+    │  handles the action, then:
+    │  event.reply('mainResp', { data, reqId })
+    ▼
+Preload script
+    │  ipcRenderer.on('mainResp', ...)
+    ▼
+Renderer callback
+```
+
+Every request travels through the preload script in both directions. The renderer never touches `ipcRenderer` directly.
+
+## The preload API
+
+The preload script exposes four functions on `window.electron` using `contextBridge.exposeInMainWorld`:
+
+```js
+// src/main/electron-preload.js
+contextBridge.exposeInMainWorld('electron', {
+    request: (msg, callback, error) => { ... },
+    registerMsgListener: (action, callback) => { ... },
+    sendMessage: (action, args) => { ... },
+    listenOnce: (action, callback) => { ... }
+});
+```
+
+---
+
+### `electron.request(msg, callback, error)`
+
+Send a request to the main process and receive an **async response** via callback.
+
+```js
+// src/main/electron-preload.js
+request: (msg, callback, error) => {
+    msg.reqId = reqId++;
+    reqInfo[msg.reqId] = { callback: callback, error: error };
+    ipcRenderer.send('rendererReq', msg);
+}
+```
+
+**Parameters**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `msg` | object | Request payload. Must include an `action` string. |
+| `msg.action` | string | The IPC action name (e.g. `'readFile'`, `'saveFile'`). |
+| `callback` | function | Called with `data` on success. |
+| `error` | function | Called with `(message, error)` on failure. |
+
+A unique `reqId` integer is automatically assigned to each request. The pending callback is stored in `reqInfo` keyed by `reqId`, then removed once the response arrives.
+
+**Example usage (from the renderer):**
+
+```js
+window.electron.request(
+    { action: 'readFile', filename: '/path/to/file.drawio', encoding: 'utf-8' },
+    (data) => { console.log('file contents:', data); },
+    (msg, e) => { console.error('read failed:', msg); }
+);
+```
+
+---
+
+### `electron.registerMsgListener(action, callback)`
+
+Listen for **push messages** sent from the main process to the renderer. The listener fires every time the main process sends a message with the matching action name.
+
+```js
+// src/main/electron-preload.js
+registerMsgListener: function(action, callback) {
+    ipcRenderer.on(action, function(event, args) {
+        callback(args);
+    });
+}
+```
+
+**Example — reacting to window maximize/unmaximize events:**
+
+```js
+window.electron.registerMsgListener('maximize', () => {
+    // update toolbar state
+});
+
+window.electron.registerMsgListener('unmaximize', () => {
+    // update toolbar state
+});
+```
+
+The main process sends these via `mainWindow.webContents.send('maximize')`.
+
+---
+
+### `electron.sendMessage(action, args)`
+
+Fire-and-forget message to the main process. No response is expected.
+
+```js
+// src/main/electron-preload.js
+sendMessage: function(action, args) {
+    ipcRenderer.send(action, args);
+}
+```
+
+**Example:**
+
+```js
+window.electron.sendMessage('toggleSpellCheck');
+window.electron.sendMessage('zoomIn');
+```
+
+These map directly to `ipcMain.on('toggleSpellCheck', ...)` handlers in the main process.
+
+---
+
+### `electron.listenOnce(action, callback)`
+
+Register a **one-time** listener. After the first message with the matching action arrives, the listener is automatically removed.
+
+```js
+// src/main/electron-preload.js
+listenOnce: function(action, callback) {
+    ipcRenderer.once(action, function(event, args) {
+        callback(args);
+    });
+}
+```
+
+**Example:**
+
+```js
+window.electron.listenOnce('args-obj', (args) => {
+    // called once when the main process sends the initial file path
+    openFile(args.args[0]);
+});
+```
+
+---
+
+## Response routing
+
+All `rendererReq` responses come back on the `mainResp` channel. The preload script dispatches them to the correct callback using the `reqId` that was assigned at call time:
+
+```js
+// src/main/electron-preload.js
+ipcRenderer.on('mainResp', (event, resp) => {
+    var callbacks = reqInfo[resp.reqId];
+
+    if (resp.error) {
+        callbacks.error(resp.msg, resp.e);
+    } else {
+        callbacks.callback(resp.data);
+    }
+
+    delete reqInfo[resp.reqId];
+});
+```
+
+This means multiple requests can be in-flight simultaneously without interfering — each response finds its own callback by `reqId`.
+
+---
+
+## Special case: `watchFile`
+
+The `watchFile` action is the one exception to the single-response rule. File-watch notifications can fire **multiple times** (once per detected change), so a separate listener registry is used instead of `reqInfo`:
+
+```js
+// src/main/electron-preload.js
+if (msg.action == 'watchFile') {
+    // Store the listener separately — it will be called multiple times
+    fileChangedListeners[msg.path] = msg.listener;
+    delete msg.listener;  // don't send the function over IPC
+}
+```
+
+Change notifications arrive on the dedicated `fileChanged` channel:
+
+```js
+ipcRenderer.on('fileChanged', (event, resp) => {
+    var listener = fileChangedListeners[resp.path];
+
+    if (listener) {
+        listener(resp.curr, resp.prev);  // curr and prev are fs.Stats objects
+    }
+});
+```
+
+To stop watching, call `electron.request({ action: 'unwatchFile', path: '...' }, ...)`.
+
+---
+
+## Main process: receiving requests
+
+All renderer requests arrive at a single handler in `electron.js`:
+
+```js
+// src/main/electron.js
+ipcMain.on("rendererReq", async (event, args) => {
+    if (!validateSender(event.senderFrame)) return null;
+
+    try {
+        let ret = null;
+
+        switch (args.action) {
+            case 'saveFile':   ret = await saveFile(...);   break;
+            case 'readFile':   ret = await readFile(...);   break;
+            case 'watchFile':  ret = await watchFile(...);  break;
+            case 'showOpenDialog': ret = await showOpenDialog(...); break;
+            // ... 20+ other actions
+        }
+
+        event.reply('mainResp', { success: true, data: ret, reqId: args.reqId });
+    } catch (e) {
+        event.reply('mainResp', { error: true, msg: e.message, e: e, reqId: args.reqId });
+    }
+});
+```
+
+The response always echoes back the original `reqId` so the preload script can route it to the correct callback.
+
+### Available actions
+
+| Action | Description |
+|--------|-------------|
+| `saveFile` | Write a diagram file to disk |
+| `writeFile` | Write arbitrary data to a path |
+| `saveDraft` | Save an auto-recovery draft |
+| `getFileDrafts` | Retrieve saved drafts for a file |
+| `readFile` | Read a file from disk |
+| `deleteFile` | Delete a file |
+| `fileStat` | Get `fs.Stats` for a path |
+| `isFileWritable` | Check write permission |
+| `checkFileExists` | Test existence of path parts |
+| `getDocumentsFolder` | Resolve the OS documents folder |
+| `showOpenDialog` | Show a native open-file dialog |
+| `showSaveDialog` | Show a native save-file dialog |
+| `watchFile` | Start watching a file for changes |
+| `unwatchFile` | Stop watching a file |
+| `clipboardAction` | Read from or write to the clipboard |
+| `openExternal` | Open a URL in the default browser |
+| `windowAction` | Minimize, maximize, or restore the window |
+| `installPlugin` | Install a plugin from a file path |
+| `uninstallPlugin` | Remove an installed plugin |
+| `getPluginFile` | Read a plugin's file content |
+| `isPluginsEnabled` | Check if the `--enable-plugins` flag is set |
+| `dirname` | Resolve the directory name of a path |
+| `getLocalFonts` | Enumerate fonts installed on the system |
+| `isFullscreen` | Return whether the focused window is fullscreen |
+| `exit` | Quit the application |
+
+---
+
+## Security: `validateSender()`
+
+Every IPC handler — including the main `rendererReq` switch and all individual `ipcMain.on` calls — begins with a sender validation check:
+
+```js
+// src/main/electron.js
+function validateSender(frame) {
+    return frame.url
+        .replace(/\/.\:\//, str => str.toUpperCase())
+        .startsWith(codeUrl);
+}
+
+// Used in every handler:
+ipcMain.on("rendererReq", async (event, args) => {
+    if (!validateSender(event.senderFrame)) return null;
+    // ...
+});
+```
+
+`codeUrl` is the `file://` URL of the `drawio/src/main/webapp` directory. Any IPC message whose sender frame does not originate from that path is silently dropped. This prevents a compromised or malicious web page from invoking file-system operations via IPC.

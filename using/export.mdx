@@ -1,0 +1,111 @@
+---
+title: "Exporting diagrams"
+description: "Export draw.io diagrams to PDF, PNG, JPEG, SVG, HTML, and XML formats using the Export As menu."
+---
+
+draw.io Desktop can export diagrams to several formats for sharing, publishing, or archiving. Exports are handled entirely on your machine — no data is sent to external servers.
+
+## Supported formats
+
+| Format | Use case |
+|--------|----------|
+| **PDF** | Print-ready documents, multi-page exports |
+| **PNG** | Raster images for presentations or embedding |
+| **JPEG** | Compressed raster images for photos or lower file size |
+| **SVG** | Scalable vector graphics for web use |
+| **HTML** | Interactive diagram viewer with zoom and layers |
+| **XML** | Raw diagram data for integration or backup |
+
+## Exporting via the menu
+
+Go to **File > Export As** and select the format you want. A dialog opens with format-specific options. Configure the options and confirm to save the exported file to your chosen location.
+
+## Format options
+
+<AccordionGroup>
+  <Accordion title="PDF">
+    PDF export renders your diagram at page size and supports multi-page output.
+
+    | Option | Description |
+    |--------|-------------|
+    | **Page margin / border** | Sets the margin (in pixels) around the diagram within the PDF page. |
+    | **Crop to diagram** | Crops the PDF page to fit the diagram bounds, ignoring standard page size. |
+    | **All pages** | Exports every page in the diagram as a separate page in the PDF. |
+    | **Page range** | Exports a specific range of pages (for example, pages 2 through 4). |
+    | **Embed diagram data** | Embeds the original XML diagram data inside the PDF. This allows the PDF to be re-opened as a diagram in compatible tools. |
+  </Accordion>
+
+  <Accordion title="PNG">
+    PNG export produces a lossless raster image.
+
+    | Option | Description |
+    |--------|-------------|
+    | **Scale** | Scales the output image relative to the diagram's on-screen size. A scale of `2` doubles the pixel dimensions. |
+    | **Border** | Adds a transparent or white border (in pixels) around the diagram. |
+    | **Transparent background** | Removes the white background, making the area outside the diagram transparent. |
+    | **Embed diagram data** | Embeds the original XML data into the PNG file as a text chunk. The resulting file can be reopened as a diagram. |
+  </Accordion>
+
+  <Accordion title="JPEG">
+    JPEG export produces a compressed raster image. Useful when file size matters more than perfect quality.
+
+    | Option | Description |
+    |--------|-------------|
+    | **Scale** | Scales the output image relative to the diagram's on-screen size. |
+    | **Border** | Adds a border (in pixels) around the diagram. |
+    | **Quality** | Sets the JPEG compression level. The default is 90 (out of 100). Lower values produce smaller files with more visible compression artifacts. |
+
+    <Warning>
+      JPEG does not support transparency. Shapes with transparent fills will appear on a white background in the exported file.
+    </Warning>
+  </Accordion>
+
+  <Accordion title="SVG">
+    SVG export produces a scalable vector graphic that renders sharply at any size.
+
+    | Option | Description |
+    |--------|-------------|
+    | **Theme** | Sets the color theme for the exported SVG: `light` or `dark`. Default is `auto` (uses the diagram's own theme setting). |
+    | **Embed images** | Embeds any raster images used in the diagram directly into the SVG file, so the SVG is self-contained. |
+    | **Embed fonts** | Embeds font data into the SVG file. Default is enabled. Disable to reduce file size when the target environment already has the fonts installed. |
+    | **Link target** | Controls how hyperlinks in the diagram open: `auto` (default), `new-win` (new tab), or `same-win` (same tab). |
+    | **Embed diagram data** | Embeds the original XML data inside the SVG. The resulting file can be reopened as a diagram. |
+  </Accordion>
+
+  <Accordion title="HTML">
+    HTML export produces a self-contained web page with an interactive diagram viewer powered by the draw.io viewer script.
+
+    | Option | Description |
+    |--------|-------------|
+    | **Theme** | Sets the viewer color theme: `light`, `dark`, or `auto` (follows system preference). Default is `auto`. |
+    | **Zoom controls** | Shows zoom in/out controls in the viewer toolbar. Default is enabled. |
+    | **Lightbox** | Enables a full-screen lightbox view when the viewer is clicked. Default is enabled. |
+    | **Layers toolbar** | Shows a layers panel in the viewer so viewers can toggle layer visibility. Default is enabled. |
+    | **Tags toolbar** | Shows a tags panel in the viewer. Default is enabled. |
+    | **Responsive fit** | Scales the diagram to fit the container width. Default is enabled. |
+    | **Link target** | Controls how hyperlinks in the diagram open: `auto` (default), `blank` (new tab), or `self` (same tab). |
+    | **All pages** | Includes all diagram pages in the HTML output, with page navigation in the toolbar. |
+
+    <Note>
+      The HTML export loads the draw.io viewer script from `viewer.diagrams.net`. The exported file requires an internet connection in the viewer's browser to render correctly.
+    </Note>
+  </Accordion>
+
+  <Accordion title="XML">
+    XML export saves the raw diagram data as a plain `.xml` file (distinct from the `.drawio` format, which is also XML-based).
+
+    | Option | Description |
+    |--------|-------------|
+    | **Uncompressed** | By default, the diagram data inside the XML is compressed. Enable this option to write human-readable, uncompressed XML. |
+  </Accordion>
+</AccordionGroup>
+
+## Exporting from the command line
+
+draw.io Desktop supports headless batch export via the CLI. This is useful for automating exports in CI pipelines or scripts.
+
+```bash
+drawio --export --format pdf --all-pages diagram.drawio
+```
+
+See the [CLI export reference](/development/cli-export) for the full list of options.

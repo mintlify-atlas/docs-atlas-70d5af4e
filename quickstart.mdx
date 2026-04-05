@@ -1,80 +1,92 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: "Quick start"
+description: "Create and export your first diagram with draw.io Desktop in minutes."
 ---
 
-## Get started in three steps
+This guide walks you through creating a diagram from scratch and exporting it. The entire workflow takes about five minutes.
 
-Get your documentation site running locally and make your first customization.
+## Before you begin
 
-### Step 1: Set up your local environment
+Make sure you have draw.io Desktop installed. If not, follow the [installation guide](/installation).
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+## Create your first diagram
 
-### Step 2: Deploy your changes
+<Steps>
+  <Step title="Open draw.io Desktop">
+    Launch draw.io Desktop from your Applications folder (macOS), Start menu (Windows), or application launcher (Linux). A new blank diagram opens automatically.
+  </Step>
+  <Step title="Add shapes">
+    Click and drag any shape from the **shape panel** on the left onto the canvas. You can search for specific shapes using the search box at the top of the panel.
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    To add a shape quickly, double-click an empty area of the canvas. A shape picker appears where you can type to filter shapes.
+  </Step>
+  <Step title="Connect shapes">
+    Hover over a shape until you see blue connection arrows appear on its edges. Click and drag from one of these arrows to another shape to create a connector.
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+    <Tip>
+      Hold **Shift** while dragging from a connection point to create a floating (non-anchored) connector.
+    </Tip>
+  </Step>
+  <Step title="Add labels">
+    Double-click any shape or connector to edit its label. Press **Escape** or click outside to finish editing.
+  </Step>
+  <Step title="Save your diagram">
+    Press **Cmd+S** (macOS) or **Ctrl+S** (Windows/Linux) to save. Choose a location and filename. draw.io saves files in the `.drawio` format, which is XML-based and human-readable.
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+    <Note>
+      Your diagram is saved entirely on your local machine. No data is sent to any server.
+    </Note>
+  </Step>
+</Steps>
 
-### Step 3: Go live
+## Export your diagram
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+Once your diagram is ready, export it for sharing or embedding.
+
+<Steps>
+  <Step title="Open the export dialog">
+    Go to **File > Export As** and choose your desired format.
+  </Step>
+  <Step title="Choose a format">
+    | Format | Best for |
+    |--------|----------|
+    | **PDF** | Print, documents, sharing |
+    | **PNG** | Presentations, web, screenshots |
+    | **SVG** | Scalable graphics, web embedding |
+    | **HTML** | Interactive diagrams on the web |
+    | **XML** | Backup, version control, round-tripping |
+
+  </Step>
+  <Step title="Configure export options">
+    Each format has its own options — for example, PNG lets you set scale and enable transparent background. Configure as needed, then click **Export**.
+  </Step>
+</Steps>
+
+## Open an existing file
+
+To open an existing `.drawio` or `.vsdx` file:
+
+- **Drag and drop** the file onto the draw.io Desktop window
+- Use **File > Open** and browse to the file
+- **Double-click** the file in Finder (macOS), File Explorer (Windows), or your file manager (Linux)
+
+<Tip>
+  On macOS, you can press **Space** in Finder to preview a `.drawio` file using Quick Look without opening the app.
+</Tip>
 
 ## Next steps
 
-Now that you have your docs running, explore these key features:
-
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Working with diagrams" icon="diagram-project" href="/using/diagrams">
+    Learn about multi-page diagrams, layers, and more
+  </Card>
+  <Card title="Export options" icon="file-export" href="/using/export">
+    Explore all export formats and their options
+  </Card>
+  <Card title="App settings" icon="sliders" href="/configuration/settings">
+    Configure spell check, zoom, and other preferences
+  </Card>
+  <Card title="CLI batch export" icon="terminal" href="/development/cli-export">
+    Automate exports from the command line
+  </Card>
 </CardGroup>
-
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>

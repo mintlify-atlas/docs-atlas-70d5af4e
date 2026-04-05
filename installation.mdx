@@ -1,0 +1,164 @@
+---
+title: "Installation"
+description: "Download and install draw.io Desktop on macOS, Windows, or Linux."
+---
+
+Download draw.io Desktop from the [GitHub Releases page](https://github.com/jgraph/drawio-desktop/releases). No account is required. Choose the package for your platform below.
+
+<Note>
+  End users do not need Node.js or any development tools. Just download the appropriate package and run it.
+</Note>
+
+## Platforms
+
+<Tabs>
+  <Tab title="macOS">
+    Two package types are available for macOS, both for Intel (x64) and Apple Silicon (arm64):
+
+    | Package | Architecture | Notes |
+    |---------|-------------|-------|
+    | DMG | x64, arm64, universal | Recommended. Drag to Applications to install. |
+    | ZIP | x64, arm64 | Portable archive. Extract and run directly. |
+
+    Download the file matching your Mac's chip. If you are unsure, choose the **universal** DMG — it runs on both Intel and Apple Silicon.
+
+    <Steps>
+      <Step title="Download the DMG">
+        Go to the [releases page](https://github.com/jgraph/drawio-desktop/releases) and download `draw.io-x64-{version}.dmg`, `draw.io-arm64-{version}.dmg`, or `draw.io-universal-{version}.dmg`.
+      </Step>
+      <Step title="Open the DMG">
+        Double-click the downloaded `.dmg` file to mount it.
+      </Step>
+      <Step title="Move to Applications">
+        Drag the **draw.io** app icon into your **Applications** folder.
+      </Step>
+      <Step title="Launch the app">
+        Open **draw.io** from Applications or Spotlight. On first launch, macOS may ask you to confirm opening an app downloaded from the internet — click **Open**.
+      </Step>
+    </Steps>
+
+    ### Quick Look preview
+
+    On macOS, draw.io Desktop includes a Quick Look extension. After installation, you can press **Space** in Finder on any `.drawio` file to see a rendered preview without opening the app.
+
+    <Tip>
+      Quick Look works automatically after installation. If it does not appear immediately, try logging out and back in, or run `qlmanage -r` in Terminal to reset Quick Look.
+    </Tip>
+  </Tab>
+
+  <Tab title="Windows">
+    Several package types are available for Windows:
+
+    | Package | Architecture | Notes |
+    |---------|-------------|-------|
+    | NSIS installer (`.exe`) | x64 | Standard installer. Recommended for most users. |
+    | MSI | x64 | For enterprise or group policy deployment. |
+    | Portable (no installer) | ARM64 | Runs without installation. |
+    | ARM64 NSIS installer | ARM64 | For Windows on ARM devices. |
+    | Windows Store (appx) | x64 | Available via the Microsoft Store as "draw.io Diagrams". |
+
+    <Steps>
+      <Step title="Download the installer">
+        Go to the [releases page](https://github.com/jgraph/drawio-desktop/releases) and download the installer for your architecture. For most users, this is `draw.io-{version}-windows-installer.exe` (x64).
+      </Step>
+      <Step title="Run the installer">
+        Double-click the `.exe` file. The installer allows you to choose the installation directory.
+      </Step>
+      <Step title="Launch draw.io">
+        Open draw.io Desktop from the Start menu or by double-clicking a `.drawio` file.
+      </Step>
+    </Steps>
+
+    <Note>
+      The Windows installer and portable executables available on GitHub Releases are signed with a code-signing certificate.
+    </Note>
+  </Tab>
+
+  <Tab title="Linux">
+    Three package formats are available for Linux, for both x86-64 and ARM64:
+
+    | Package | Architecture | Notes |
+    |---------|-------------|-------|
+    | AppImage | x64, arm64 | Portable. No installation needed. |
+    | `.deb` | x64, arm64 | For Debian, Ubuntu, and derivatives. |
+    | `.rpm` | x64, arm64 | For Fedora, RHEL, openSUSE, and derivatives. |
+    | Snap | x64 | Available via the Snap Store. |
+
+    <Tabs>
+      <Tab title="AppImage">
+        <Steps>
+          <Step title="Download the AppImage">
+            Download `draw.io-x86_64-{version}.AppImage` (or the `arm64` variant) from the [releases page](https://github.com/jgraph/drawio-desktop/releases).
+          </Step>
+          <Step title="Make it executable">
+            ```bash
+            chmod +x draw.io-x86_64-*.AppImage
+            ```
+          </Step>
+          <Step title="Run it">
+            ```bash
+            ./draw.io-x86_64-*.AppImage
+            ```
+          </Step>
+        </Steps>
+      </Tab>
+      <Tab title="Debian / Ubuntu (.deb)">
+        <Steps>
+          <Step title="Download the .deb package">
+            Download `draw.io-amd64-{version}.deb` from the [releases page](https://github.com/jgraph/drawio-desktop/releases).
+          </Step>
+          <Step title="Install it">
+            ```bash
+            sudo dpkg -i draw.io-amd64-*.deb
+            ```
+          </Step>
+          <Step title="Launch draw.io">
+            Open draw.io from your application launcher, or run `drawio` in a terminal.
+          </Step>
+        </Steps>
+      </Tab>
+      <Tab title="Fedora / RHEL (.rpm)">
+        <Steps>
+          <Step title="Download the .rpm package">
+            Download `draw.io-x86_64-{version}.rpm` from the [releases page](https://github.com/jgraph/drawio-desktop/releases).
+          </Step>
+          <Step title="Install it">
+            ```bash
+            sudo rpm -i draw.io-x86_64-*.rpm
+            ```
+          </Step>
+          <Step title="Launch draw.io">
+            Open draw.io from your application launcher, or run `drawio` in a terminal.
+          </Step>
+        </Steps>
+      </Tab>
+    </Tabs>
+  </Tab>
+</Tabs>
+
+## Data storage
+
+draw.io Desktop stores application settings and local storage data in your user data directory:
+
+| Platform | Location |
+|----------|----------|
+| macOS | `~/Library/Application Support/draw.io` |
+| Windows | `%APPDATA%\draw.io\` (typically `C:\Users\<username>\AppData\Roaming\draw.io\`) |
+
+Diagram files themselves are stored wherever you choose to save them — draw.io Desktop does not manage a central library.
+
+## Auto-update
+
+By default, draw.io Desktop checks for a new release on GitHub at startup and prompts you to install it. The update is downloaded from an AWS S3 bucket owned by GitHub.
+
+To disable auto-update, launch the app with the `--disable-update` flag:
+
+```bash
+drawio --disable-update
+```
+
+Or set the `DRAWIO_DISABLE_UPDATE=true` environment variable. Auto-update is also disabled automatically when running inside a Flatpak sandbox.
+
+<Note>
+  No diagram data is involved in the update process. Only version metadata and the application binary are downloaded.
+</Note>

@@ -1,0 +1,120 @@
+{
+  "projectType": "saas",
+  "projectName": "draw.io Desktop",
+  "projectDescription": "A free, open-source Electron desktop application for creating diagrams and flowcharts, designed with a security-first approach that keeps all diagram data completely offline.",
+  "theme": "almond",
+  "primaryColor": "#040404",
+  "lightColor": "#eb7c0b",
+  "darkColor": "#fac47c",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Using draw.io",
+            "pages": [
+              "using/diagrams",
+              "using/export",
+              "using/file-formats"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/settings",
+              "configuration/plugins",
+              "configuration/google-fonts"
+            ]
+          },
+          {
+            "group": "Security",
+            "pages": [
+              "security/overview",
+              "security/csp",
+              "security/data-privacy"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Developer Guide",
+        "groups": [
+          {
+            "group": "Development Setup",
+            "pages": [
+              "development/setup",
+              "development/architecture",
+              "development/ipc"
+            ]
+          },
+          {
+            "group": "CLI & Export",
+            "pages": [
+              "development/cli-export",
+              "development/cli-reference"
+            ]
+          },
+          {
+            "group": "Building & Releasing",
+            "pages": [
+              "development/building",
+              "development/release-process",
+              "development/ci-cd"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Offline-first: no diagram data is ever sent to the internet",
+    "Cross-platform desktop app for macOS, Windows, and Linux",
+    "CLI export mode for batch conversion to PDF, PNG, SVG, HTML, and more",
+    "Auto-update mechanism via GitHub Releases",
+    "Support for .drawio and .vsdx (Visio) file formats",
+    "macOS Quick Look preview for .drawio files",
+    "Content Security Policy enforces no remote script execution",
+    "Multi-page diagrams with layer support",
+    "Plugin system (opt-in)",
+    "Spell check and Google Fonts support (opt-in)"
+  ],
+  "publicApiSurface": [
+    "drawio [options] <input file/folder>",
+    "--export / -x: Export mode",
+    "--format / -f <pdf|png|jpg|svg|xml|html>: Output format",
+    "--output / -o <path>: Output file or folder",
+    "--all-pages / -a: Export all pages",
+    "--page-index / -p <index>: Select specific page",
+    "--page-range / -g <from>..<to>: Select page range",
+    "--scale / -s <scale>: Scale the diagram",
+    "--width / --height: Fit to dimensions",
+    "--border / -b <px>: Border width",
+    "--transparent / -t: Transparent PNG background",
+    "--embed-diagram / -e: Embed diagram data in output",
+    "--embed-svg-images: Embed images in SVG",
+    "--embed-svg-fonts: Embed fonts in SVG",
+    "--quality / -q <0-100>: JPEG quality",
+    "--uncompressed / -u: Uncompressed XML output",
+    "--svg-theme <dark|light|auto>: SVG export theme",
+    "--svg-links-target <auto|new-win|same-win>: SVG link target",
+    "--html-theme / --html-zoom / --html-lightbox / --html-layers: HTML viewer options",
+    "--recursive / -r: Recurse into subfolders",
+    "--enable-plugins: Enable plugins",
+    "--disable-update: Disable auto-update",
+    "--disable-acceleration: Disable hardware acceleration",
+    "--zoom / -z <factor>: Scale application UI",
+    "electron.request(msg, callback, error): IPC request from renderer",
+    "electron.registerMsgListener(action, callback): Listen for main-process messages",
+    "electron.sendMessage(action, args): Send message to main process",
+    "electron.listenOnce(action, callback): One-time IPC listener"
+  ]
+}

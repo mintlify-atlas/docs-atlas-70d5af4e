@@ -1,0 +1,221 @@
+---
+title: "Building from source"
+description: "How to clone, configure, and build draw.io Desktop for each supported platform."
+---
+
+draw.io Desktop is built with [electron-builder](https://www.electron.build/). Each platform has its own configuration file and npm script. All build output goes to `./dist/`.
+
+## Prerequisites
+
+- **Node.js 20 or later** — the `package.json` engines field enforces `>=20`
+- **Git** — required for the recursive clone
+- **Platform toolchain:**
+  - macOS: Xcode Command Line Tools; an Apple Developer ID certificate for signing and notarization
+  - Windows: no extra toolchain required locally; code signing uses `CSC_LINK`
+  - Linux: `icnsutils`, `graphicsmagick`, `xz-utils`, and `rpm` (for RPM targets)
+
+## Clone and install
+
+<Steps>
+  <Step title="Clone recursively">
+    The core draw.io editor lives in the `drawio/` git submodule. The `--recursive` flag is required — a plain clone produces an empty submodule directory and the build will fail.
+
+    ```bash
+    git clone --recursive https://github.com/jgraph/drawio-desktop.git
+    cd drawio-desktop
+    ```
+
+    <Note>
+      If you already cloned without `--recursive`, run `git submodule update --init --recursive` to initialise the submodule.
+    </Note>
+  </Step>
+
+  <Step title="Install dependencies">
+    ```bash
+    npm install
+    ```
+  </Step>
+
+  <Step title="Sync the version">
+    Before every build, run the sync script. It reads `drawio/VERSION` (the source of truth for the version number), writes it into `package.json`, and generates `src/main/disableUpdate.js`:
+
+    ```bash
+    npm run sync
+    ```
+
+    The script validates that `drawio/VERSION` exists and contains a valid `X.Y.Z` string. If the submodule was not initialised, it exits with an error.
+
+    To build with auto-update disabled (used for 32-bit and ARM64 Windows builds in CI), pass the `disableUpdate` argument:
+
+    ```bash
+    npm run sync -- disableUpdate
+    ```
+  </Step>
+
+  <Step title="Build for your platform">
+    Choose the command that matches your target. All commands invoke `electron-builder` with `--publish always`, which uploads artifacts to GitHub Releases when `GH_TOKEN` is set.
+
+    <Tabs>
+      <Tab title="Windows x64">
+        ```bash
+        npm run release-win
+        ```
+
+        Config: `electron-builder-win.json`
+
+        Produces:
+        - NSIS installer: `draw.io-{version}-windows-installer.exe`
+        - MSI: `draw.io-{version}.msi`
+
+        Both targets build for `x64` only. The NSIS installer is per-machine and allows changing the installation directory.
+      </Tab>
+      <Tab title="Windows 32-bit">
+        ```bash
+        npm run release-win32
+        ```
+
+        Config: `electron-builder-win32.json`
+
+        Produces:
+        - NSIS installer: `draw.io-ia32-{version}-windows-32bit-installer.exe`
+
+        Run `npm run sync -- disableUpdate` before this command so the 32-bit build does not write a `latest.yml` that would interfere with the x64 auto-updater.
+      </Tab>
+      <Tab title="Windows ARM64">
+        ```bash
+        npm run release-win-arm64
+        ```
+
+        Config: `electron-builder-win-arm64.json`
+
+        Produces:
+        - NSIS installer: `draw.io-arm64-{version}-windows-arm64-installer.exe`
+        - Portable: `draw.io-arm64-{version}-windows-arm64-no-installer.exe`
+
+        Like the 32-bit build, run `npm run sync -- disableUpdate` first.
+      </Tab>
+      <Tab title="Windows Store (APPX)">
+        ```bash
+        npm run release-appx
+        ```
+
+        Config: `electron-builder-appx.json`
+
+        Produces:
+        - APPX package: `draw.io-x64-{version}.appx`
+
+        Display name: `draw.io Diagrams`. Publisher: `draw.io Ltd`.
+
+        Run `npm run sync -- disableUpdate` before this command.
+      </Tab>
+      <Tab title="Linux">
+        ```bash
+        npm run release-linux
+        ```
+
+        Config: `electron-builder-linux-mac.json`
+
+        Produces (for both `x64` and `arm64`):
+        - AppImage: `drawio-{arch}-{version}.AppImage`
+        - Debian package: `drawio-{arch}-{version}.deb`
+        - RPM: `drawio-{arch}-{version}.rpm`
+
+        No code signing is required for Linux builds.
+      </Tab>
+      <Tab title="Snap">
+        ```bash
+        npm run release-snap
+        ```
+
+        Config: `electron-builder-snap.json`
+
+        Produces:
+        - Snap package: `draw.io-{arch}-{version}.snap`
+
+        Note: this command uses `--publish never`. In CI, the snap is pushed to the Snapcraft store with `snapcraft push --release edge`.
+
+        Requires `snapcraft` to be installed (`sudo snap install snapcraft --classic`).
+      </Tab>
+      <Tab title="macOS">
+        macOS builds are handled by the same config as Linux (`electron-builder-linux-mac.json`). There is no dedicated `release-mac` script; macOS is built by the same `release-linux` invocation when running on macOS.
+
+        Produces (for `x64`, `arm64`, and `universal`):
+        - DMG: `draw.io-{arch}-{version}.dmg`
+        - ZIP: `draw.io-{arch}-{version}.zip`
+
+        See [macOS signing and notarization](#macos-signing-and-notarization) below.
+      </Tab>
+    </Tabs>
+  </Step>
+</Steps>
+
+## Output directory
+
+All build artifacts are written to `./dist/`. The directory is created automatically by electron-builder.
+
+## Platform-specific notes
+
+### macOS signing and notarization
+
+macOS builds require an Apple Developer ID certificate. Set the following environment variables before building:
+
+| Variable | Description |
+|---|---|
+| `CSC_LINK` | Base64-encoded `.p12` certificate or path to it |
+| `CSC_KEY_PASSWORD` | Password for the certificate |
+| `APPLEID` | Apple ID email used for notarization |
+| `APPLEIDPASS` | App-specific password for the Apple ID |
+| `APPLE_TEAM_ID` | Apple Developer Team ID |
+
+The build configuration sets `hardenedRuntime: true` and `gatekeeperAssess: false`. After electron-builder signs the app, two post-build hooks run:
+
+1. **`build/fuses.cjs`** (`afterPack`) — applies Electron security fuses (see [Electron fuses](#electron-fuses) below).
+2. **`build/notarize.mjs`** (`afterSign`) — assembles the macOS Quick Look preview extension, signs it, re-signs the outer `.app` bundle, then submits to Apple's notary service using `notarytool`.
+
+**Quick Look extension:** Pressing Space in Finder shows a rendered preview of `.drawio` files. The `afterSign` hook copies `PreviewExtension.appex` from the `quicklookjs` package into the app bundle, replaces its default `preview.html` with draw.io's `quicklook-preview.html`, bundles `viewer-static.min.js`, and writes a custom `Info.plist` declaring the `com.jgraph.drawio` UTI. The extension is assembled in `afterSign` — not `afterPack` — so it is never present in an unsigned state when electron-builder verifies the signature.
+
+The `.appex` is signed with sandbox entitlements (`build/quicklook-entitlements.plist`), which differ from the main app's `entitlements.mac.plist`. After signing the extension, the outer `.app` is re-signed to update its seal.
+
+For local development without a Developer ID, `viewer-static.min.js` is read from `drawio/src/main/webapp/js/`. In CI, the CI workflow copies it to `build/viewer-static.min.js` before the submodule cleanup step removes it.
+
+### Windows code signing
+
+Set `CSC_LINK` and `CSC_KEY_PASSWORD` to sign Windows executables. In CI, these are stored as repository secrets (`WIN_CSC_LINK` and `WIN_CSC_KEY_PASSWORD`). Without these variables, electron-builder produces unsigned binaries.
+
+### Linux
+
+No signing is required. The Linux build needs additional system packages:
+
+```bash
+sudo apt-get install -y icnsutils graphicsmagick xz-utils rpm
+```
+
+The CI workflow also patches `electron-builder-linux-mac.json` to set `productName` to `drawio` (removing the dot from `draw.io`) for the Linux executable name.
+
+## Electron fuses
+
+`build/fuses.cjs` runs as an `afterPack` hook on all platforms. It uses `@electron/fuses` to flip the following security settings in the Electron binary:
+
+| Fuse | Value | Effect |
+|---|---|---|
+| `RunAsNode` | `false` | Disables `ELECTRON_RUN_AS_NODE` |
+| `EnableCookieEncryption` | `true` | Encrypts cookies at rest |
+| `EnableNodeOptionsEnvironmentVariable` | `false` | Disables `NODE_OPTIONS` env var |
+| `EnableNodeCliInspectArguments` | `false` | Disables `--inspect` / `--inspect-brk` |
+| `OnlyLoadAppFromAsar` | `true` | Enforces loading only from `app.asar` |
+
+For ARM64 and universal macOS builds, the hook also resets the ad-hoc Darwin signature (`resetAdHocDarwinSignature: true`) after flipping fuses.
+
+The hook skips the temporary intermediate directories that electron-builder creates during universal builds (paths containing `-temp/`).
+
+## Environment variables summary
+
+| Variable | Platform | Required for |
+|---|---|---|
+| `GH_TOKEN` | All | Uploading artifacts to GitHub Releases |
+| `CSC_LINK` | macOS, Windows | Code signing certificate |
+| `CSC_KEY_PASSWORD` | macOS, Windows | Certificate password |
+| `APPLEID` | macOS | Notarization |
+| `APPLEIDPASS` | macOS | Notarization (app-specific password) |
+| `APPLE_TEAM_ID` | macOS | Notarization |
+| `DRAWIO_ENV` | All | Set to `dev` to auto-open DevTools |

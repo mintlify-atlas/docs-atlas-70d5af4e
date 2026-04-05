@@ -1,0 +1,142 @@
+---
+title: "App settings"
+description: "Persistent settings, environment variables, and startup flags that control draw.io Desktop behavior."
+---
+
+draw.io Desktop stores several settings between sessions using [electron-store](https://github.com/sindresorhus/electron-store). On macOS, the data directory is `~/Library/Application Support/draw.io`. On Windows it is `%APPDATA%\draw.io\`.
+
+## Persistent settings
+
+These settings are saved automatically when you change them through the in-app menus. They persist across restarts.
+
+### Spell check
+
+| Default | macOS | Windows / Linux |
+|---------|-------|-----------------|
+| On      | On    | Off             |
+
+Spell checking is enabled by default on macOS and disabled on other platforms. Toggle it from the app's settings menu. The preference is stored as `enableSpellCheck`.
+
+### Draft backup (`enableStoreBkp`)
+
+When enabled, draw.io automatically saves a draft copy of your open diagram. This protects your work if the app crashes or exits unexpectedly.
+
+- **Default:** enabled on all platforms
+- Toggle from the in-app settings menu
+- Stored as `enableStoreBkp`
+
+### Window size and position (`lastWinSize`)
+
+The app remembers window size, position, and whether it was maximized or in full-screen mode. This happens automatically — there is no toggle.
+
+The stored format is `width,height,x,y,maximized,fullscreen`. The minimum restored size is 500×500 pixels. If the saved position falls outside all connected displays, the app ignores it and uses the default position.
+
+## Zoom level
+
+You can scale the entire application UI with the `--zoom` flag at launch. The value is a multiplier; `1` is 100%.
+
+```bash
+# Launch at 125% scale
+drawio --zoom 1.25
+```
+
+You can also use **Zoom In**, **Zoom Out**, and **Actual Size** from the application menu at any time. These adjust the zoom interactively but do not persist across restarts. Use `--zoom` for a permanent setting.
+
+## The `urlParams.json` file
+
+draw.io reads a file named `urlParams.json` from the current working directory at startup. Any key–value pairs in this file are merged into the query parameters passed to the app's internal web content, letting you override defaults without environment variables or CLI flags.
+
+Place `urlParams.json` in the directory from which you launch draw.io. The file must be valid JSON.
+
+```json urlParams.json
+{
+  "isGoogleFontsEnabled": 1,
+  "enableSpellCheck": 1
+}
+```
+
+<Note>
+Parameters set in `urlParams.json` override the values read from electron-store. If both exist, the file wins.
+</Note>
+
+### Recognized parameters
+
+These are the parameters draw.io reads and passes to its web layer:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `dev` | `0` or `1` | `0` | Enable dev/test mode |
+| `test` | `0` or `1` | `0` | Enable test mode (same as `dev`) |
+| `gapi` | `0` or `1` | `0` | Enable Google Drive integration |
+| `db` | `0` or `1` | `0` | Enable Dropbox integration |
+| `od` | `0` or `1` | `0` | Enable OneDrive integration |
+| `gh` | `0` or `1` | `0` | Enable GitHub integration |
+| `gl` | `0` or `1` | `0` | Enable GitLab integration |
+| `tr` | `0` or `1` | `0` | Enable Trello integration |
+| `browser` | `0` or `1` | `0` | Enable browser mode |
+| `picker` | `0` or `1` | `0` | Enable file picker |
+| `mode` | string | `"device"` | App mode |
+| `export` | string | `"https://convert.diagrams.net/node/export"` | Export service URL |
+| `disableUpdate` | `0` or `1` | `0` | Disable auto-update |
+| `enableSpellCheck` | `0` or `1` | Platform default | Enable spell check |
+| `enableStoreBkp` | `0` or `1` | `1` | Enable draft backup |
+| `isGoogleFontsEnabled` | `0` or `1` | `0` | Enable Google Fonts |
+
+<Warning>
+Cloud integration parameters (`gapi`, `db`, `od`, `gh`, `gl`, `tr`) enable connections to external services. draw.io Desktop is designed for offline-first, local-file use. Enable these only if you understand and accept the associated network access.
+</Warning>
+
+## Environment variables
+
+| Variable | Effect |
+|----------|--------|
+| `DRAWIO_ENV=dev` | Opens DevTools automatically on every window and enables verbose console logging |
+| `DRAWIO_DISABLE_UPDATE=true` | Prevents the auto-updater from checking for or downloading updates |
+| `DRAWIO_SILENT_UPDATE=true` | Downloads and installs updates in the background without prompting (has no effect if `DRAWIO_DISABLE_UPDATE` is set) |
+
+<Tabs>
+  <Tab title="macOS / Linux">
+    ```bash
+    # Run in dev mode
+    DRAWIO_ENV=dev drawio
+
+    # Disable updates
+    DRAWIO_DISABLE_UPDATE=true drawio
+    ```
+  </Tab>
+  <Tab title="Windows (PowerShell)">
+    ```powershell
+    # Run in dev mode
+    $env:DRAWIO_ENV="dev"; drawio
+
+    # Disable updates
+    $env:DRAWIO_DISABLE_UPDATE="true"; drawio
+    ```
+  </Tab>
+</Tabs>
+
+## CLI flags
+
+Pass these flags when launching the app from a terminal or a custom shortcut.
+
+| Flag | Description |
+|------|-------------|
+| `--zoom <factor>` | Scale the application UI (e.g. `--zoom 1.5` for 150%) |
+| `--enable-plugins` | Allow loading plugins from the plugins directory |
+| `--disable-update` | Disable the auto-updater (same effect as `DRAWIO_DISABLE_UPDATE=true`) |
+| `--silent-update` | Enable silent background updates |
+| `--disable-acceleration` | Disable GPU hardware acceleration |
+
+<Note>
+On Linux, when draw.io is running inside a Flatpak sandbox, updates are disabled automatically regardless of flags or environment variables.
+</Note>
+
+## Hardware acceleration
+
+GPU hardware acceleration is enabled by default. If you experience rendering issues or graphical glitches, disable it:
+
+```bash
+drawio --disable-acceleration
+```
+
+This flag must be passed at launch; it cannot be toggled at runtime.

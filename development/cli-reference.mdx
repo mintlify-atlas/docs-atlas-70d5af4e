@@ -1,0 +1,220 @@
+---
+title: "CLI reference"
+description: "Complete reference for all draw.io Desktop CLI flags, organized by category."
+---
+
+Run `drawio --help` to print usage information. The general invocation is:
+
+```bash
+drawio [options] <input file or folder>
+```
+
+All flags below apply to export mode (`--export` / `-x`) unless noted otherwise.
+
+---
+
+## Input / output
+
+<ParamField path="-x, --export" type="boolean">
+  Enable export mode. Processes the input file or folder and writes output files. Required to trigger any export.
+</ParamField>
+
+<ParamField path="-r, --recursive" type="boolean">
+  When the input is a folder, recurse into sub-folders and export all diagram files found there.
+</ParamField>
+
+<ParamField path="-o, --output" type="string">
+  Path to the output file or directory.
+
+  - If the path is an existing directory, each output file is placed there.
+  - If the path does not exist, it is used as the output filename (single-file export only).
+  - If the path has a recognized extension (`.pdf`, `.png`, `.svg`, `.jpg`, `.jpeg`, `.xml`, `.html`), `--format` is ignored and the format is inferred from the extension.
+
+  When omitted, the output file is placed next to the input file with the format as the extension.
+</ParamField>
+
+<ParamField path="-k, --check" type="boolean">
+  Do not overwrite an existing file. Instead, append a numeric suffix (e.g. `file-1.pdf`, `file-2.pdf`) until a unique name is found.
+</ParamField>
+
+<ParamField path="-c, --create" type="boolean">
+  Open a new empty diagram if no input file is passed. Applies to GUI mode, not export mode.
+</ParamField>
+
+---
+
+## Export formats
+
+<ParamField path="-f, --format" type="string" default="pdf">
+  Output format for the export. Ignored when the output filename has a recognized extension.
+
+  Allowed values: `pdf`, `svg`, `png`, `jpeg`, `jpg`, `xml`, `html`
+</ParamField>
+
+---
+
+## Image options (PNG, JPEG)
+
+<ParamField path="-q, --quality" type="number" default="90">
+  JPEG output quality, from 1 (lowest) to 100 (highest). Has no effect on other formats.
+</ParamField>
+
+<ParamField path="-t, --transparent" type="boolean">
+  Use a transparent background for PNG exports. Has no effect on other formats.
+</ParamField>
+
+<ParamField path="-b, --border" type="number" default="0">
+  Width of the blank border (in pixels) added around the exported diagram. For PDF exports this sets the page margin instead.
+</ParamField>
+
+<ParamField path="-s, --scale" type="number">
+  Scale factor applied to the diagram. A value of `2` doubles the output resolution. Cannot be combined with `--width` or `--height`.
+</ParamField>
+
+<ParamField path="--width" type="number">
+  Fit the output image or PDF into the specified width in pixels, preserving the aspect ratio.
+</ParamField>
+
+<ParamField path="--height" type="number">
+  Fit the output image or PDF into the specified height in pixels, preserving the aspect ratio.
+</ParamField>
+
+<ParamField path="-e, --embed-diagram" type="boolean">
+  Embed a copy of the diagram XML inside the exported file. Supported for PNG, SVG, and PDF. The exported file can be reopened in draw.io.
+</ParamField>
+
+---
+
+## Page and layer selection
+
+<ParamField path="-a, --all-pages" type="boolean">
+  Export all pages in the diagram. Only effective for `pdf` and `html` formats. When combined with `--page-index` or `--page-range`, those flags take precedence.
+</ParamField>
+
+<ParamField path="-p, --page-index" type="number">
+  Export a single page by its 1-based index (e.g. `--page-index 1` for the first page). When exporting to an image format and this flag is omitted, the first page is exported by default.
+</ParamField>
+
+<ParamField path="-g, --page-range" type="string">
+  Export a contiguous range of pages. Use the `from..to` syntax with 1-based page numbers, for example `--page-range 2..5`. Only effective for `pdf` format.
+</ParamField>
+
+<ParamField path="-l, --layers" type="string">
+  Comma-separated list of 0-based layer indexes to include in the export, for example `--layers 0,2`. Applies to all exported pages. When omitted, all layers are exported.
+</ParamField>
+
+---
+
+## SVG options
+
+<ParamField path="--svg-theme" type="string" default="auto">
+  Color theme applied to the exported SVG. The default `auto` uses the diagram's own theme setting. Pass `dark` or `light` to override.
+
+  Allowed values: `dark`, `light`
+</ParamField>
+
+<ParamField path="--svg-links-target" type="string" default="auto">
+  Browser target for hyperlinks in the exported SVG.
+
+  Allowed values: `auto`, `new-win`, `same-win`
+</ParamField>
+
+<ParamField path="--embed-svg-images" type="boolean">
+  Embed referenced images directly into the SVG file as base64 data URIs. Only effective for `svg` format.
+</ParamField>
+
+<ParamField path="--embed-svg-fonts" type="boolean" default="true">
+  Embed fonts used in the diagram into the SVG file. Only effective for `svg` format. Pass `false` to disable: `--embed-svg-fonts false`.
+</ParamField>
+
+<ParamField path="-u, --uncompressed" type="boolean">
+  Write uncompressed XML when exporting to `xml` or `svg` format. By default, the embedded diagram data is compressed.
+</ParamField>
+
+---
+
+## PDF options
+
+<ParamField path="--crop" type="boolean">
+  Crop the PDF page to the diagram bounding box, removing any surrounding whitespace.
+</ParamField>
+
+---
+
+## HTML viewer options
+
+These flags configure the interactive viewer when exporting to `html` format.
+
+<ParamField path="--html-theme" type="string" default="auto">
+  Color theme for the HTML viewer.
+
+  Allowed values: `dark`, `light`, `auto`
+</ParamField>
+
+<ParamField path="--html-zoom" type="boolean" default="true">
+  Show zoom controls in the HTML viewer toolbar. Pass `false` to hide: `--html-zoom false`.
+</ParamField>
+
+<ParamField path="--html-lightbox" type="boolean" default="true">
+  Enable the lightbox (full-screen view) in the HTML viewer. Pass `false` to disable: `--html-lightbox false`.
+</ParamField>
+
+<ParamField path="--html-layers" type="boolean" default="true">
+  Show the layers panel in the HTML viewer toolbar. Pass `false` to hide: `--html-layers false`.
+</ParamField>
+
+<ParamField path="--html-tags" type="boolean" default="true">
+  Show the tags panel in the HTML viewer toolbar. Pass `false` to hide: `--html-tags false`.
+</ParamField>
+
+<ParamField path="--html-fit" type="boolean" default="true">
+  Responsive fit: scale the diagram to fill the container width. Pass `false` to use a fixed size: `--html-fit false`.
+</ParamField>
+
+<ParamField path="--html-link-target" type="string" default="auto">
+  Browser target for hyperlinks inside the HTML viewer.
+
+  Allowed values: `auto`, `blank`, `self`
+</ParamField>
+
+<ParamField path="--html-link-color" type="string" default="#0000ff">
+  Highlight color for clickable links in the HTML viewer. Accepts any CSS color value, for example `--html-link-color "#ff0000"`.
+</ParamField>
+
+<ParamField path="--html-edit-link" type="string">
+  URL for an "Edit" button shown in the HTML viewer toolbar. When set, users can click it to open the diagram in draw.io. Example: `--html-edit-link "https://app.diagrams.net/?..."`.
+</ParamField>
+
+---
+
+## General options
+
+<ParamField path="-z, --zoom" type="number">
+  Scale factor for the application UI (not the exported diagram). Useful on high-DPI displays.
+</ParamField>
+
+<ParamField path="--enable-plugins" type="boolean">
+  Load draw.io plugins during export. Plugins are disabled by default in export mode.
+</ParamField>
+
+<ParamField path="--disable-update" type="boolean">
+  Disable the automatic update check on startup. Can also be set via the `DRAWIO_DISABLE_UPDATE=true` environment variable.
+</ParamField>
+
+<ParamField path="--disable-acceleration" type="boolean">
+  Disable GPU hardware acceleration. Useful on systems where GPU rendering causes rendering artifacts or crashes.
+</ParamField>
+
+<ParamField path="-V, --version" type="boolean">
+  Print the application version and exit.
+</ParamField>
+
+<ParamField path="-h, --help" type="boolean">
+  Print usage information and exit. Due to how the CLI parser is configured, `--help` may not print output in all cases; use `-V` to confirm the binary is running correctly.
+</ParamField>
+
+---
+
+## See also
+
+- [CLI batch export](/development/cli-export) — usage guide with practical examples

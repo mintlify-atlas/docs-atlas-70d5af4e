@@ -1,0 +1,196 @@
+---
+title: "CLI batch export"
+description: "Run draw.io Desktop headlessly to batch-export diagrams to PDF, PNG, SVG, HTML, and other formats."
+---
+
+draw.io Desktop includes a CLI that lets you export diagrams without opening the GUI. This is useful for CI pipelines, build scripts, and bulk conversion workflows.
+
+## Executable names by platform
+
+| Platform | Executable |
+| -------- | ---------- |
+| **macOS** | `/Applications/draw.io.app/Contents/MacOS/draw.io` |
+| **Linux** | `drawio` (AppImage or package install) |
+| **Windows** | `draw.io.exe` (usually in `%LOCALAPPDATA%\Programs\draw.io\`) |
+
+For brevity, the examples below use `drawio`. Substitute the full path for your platform as needed.
+
+<Note>
+On Linux, export mode requires a display. In headless environments (CI servers, containers), use a virtual framebuffer such as `xvfb-run`:
+
+```bash
+xvfb-run drawio --export --format png mydiagram.drawio
+```
+</Note>
+
+## Basic usage
+
+```bash
+drawio --export --format <format> [options] <input file or folder>
+```
+
+The minimum required flags are `--export` (`-x`) and an input file. The format defaults to `pdf` when `--format` is omitted.
+
+## Common examples
+
+### Export a single file to PDF
+
+```bash
+drawio --export --format pdf mydiagram.drawio
+```
+
+Produces `mydiagram.pdf` in the same directory as the source file.
+
+### Export a single file to PNG with a transparent background
+
+```bash
+drawio --export --format png --transparent mydiagram.drawio
+```
+
+### Export all pages of a multi-page diagram to a single PDF
+
+```bash
+drawio --export --format pdf --all-pages mydiagram.drawio
+```
+
+The `--all-pages` flag is only effective for `pdf` and `html` formats.
+
+### Export a folder of diagrams to SVG
+
+```bash
+drawio --export --format svg ./diagrams
+```
+
+Each `.drawio` file in the folder is converted to an `.svg` file next to the source.
+
+### Export recursively through subfolders
+
+```bash
+drawio --export --format svg --recursive ./diagrams
+```
+
+### Export with a custom output path
+
+Specify a directory to collect all outputs in one place:
+
+```bash
+drawio --export --format png --output ./dist/images ./diagrams
+```
+
+Specify a file path for a single-file export:
+
+```bash
+drawio --export --output mydiagram.png mydiagram.drawio
+```
+
+When an output filename with a recognized extension (`.pdf`, `.png`, `.svg`, `.jpg`, `.xml`, `.html`) is given, the `--format` flag is ignored and the format is inferred from the extension.
+
+### Export with custom dimensions or scale
+
+Fit the output to a specific width (aspect ratio is preserved):
+
+```bash
+drawio --export --format png --width 1920 mydiagram.drawio
+```
+
+Scale the diagram by a factor:
+
+```bash
+drawio --export --format png --scale 2 mydiagram.drawio
+```
+
+### Export a specific page by index
+
+Pages are numbered from 1:
+
+```bash
+drawio --export --format png --page-index 2 mydiagram.drawio
+```
+
+### Export a page range to PDF
+
+```bash
+drawio --export --format pdf --page-range 2..5 mydiagram.drawio
+```
+
+### Export to an interactive HTML viewer
+
+```bash
+drawio --export --format html --all-pages mydiagram.drawio
+```
+
+The generated `.html` file loads the diagram from [viewer.diagrams.net](https://viewer.diagrams.net) and renders it in the browser with zoom, layers, and lightbox controls enabled by default.
+
+Customize the viewer appearance:
+
+```bash
+drawio --export --format html \
+  --all-pages \
+  --html-theme dark \
+  --html-link-target blank \
+  mydiagram.drawio
+```
+
+### Embed the diagram source in an exported PNG or SVG
+
+```bash
+drawio --export --format png --embed-diagram mydiagram.drawio
+```
+
+The exported image carries the original XML so it can be reopened in draw.io.
+
+### Export specific layers only
+
+Layer indexes are 0-based. Pass a comma-separated list:
+
+```bash
+drawio --export --format png --layers 0,2 mydiagram.drawio
+```
+
+## Output filename resolution
+
+When `--output` is not specified:
+
+- **Single file input** — output is written next to the input file with the format as the extension.
+- **Folder input** — each output file is written next to its source file.
+
+When `--output` points to an **existing directory**, all output files are written into that directory with names derived from their source files.
+
+When `--output` points to a **non-existent path**, it is treated as an output filename (single-file export only).
+
+## Skip existing files with `--check`
+
+Use `--check` (`-k`) to avoid overwriting files that already exist. draw.io appends a numeric suffix instead:
+
+```bash
+drawio --export --format pdf --check mydiagram.drawio
+# Produces mydiagram.pdf, mydiagram-1.pdf, mydiagram-2.pdf, ...
+```
+
+## Exit codes and error handling
+
+Errors are printed to `stderr`. The process exits with a non-zero code on fatal errors (missing input file, invalid page range, etc.). Individual file errors during batch export are logged but do not stop processing of remaining files.
+
+```bash
+drawio --export --format pdf missing.drawio
+# stderr: Error: input file/directory not found
+# exit code: 1
+```
+
+## Supported input formats
+
+The CLI can export from these input file types:
+
+| Extension | Notes |
+| --------- | ----- |
+| `.drawio` | Native draw.io XML |
+| `.xml` | draw.io XML |
+| `.svg` | SVG with embedded draw.io XML |
+| `.png` | PNG with embedded draw.io XML |
+| `.pdf` | PDF with embedded draw.io XML |
+| `.vsdx` | Visio format (imported then exported) |
+| `.csv` | CSV (HTML export not supported for this format) |
+
+## See also
+
+- [CLI reference](/development/cli-reference) — complete flag reference

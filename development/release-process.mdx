@@ -1,0 +1,248 @@
+---
+title: "Release process"
+description: "End-to-end procedure for preparing, building, verifying, and publishing a draw.io Desktop release."
+---
+
+Releases follow a two-phase model: automated preparation via GitHub Actions, followed by manual verification and publishing. The version number is always read from `drawio/VERSION` — not from `package.json` directly.
+
+## Roles
+
+| Role | Responsibility |
+|---|---|
+| **Release Lead** | Triggers the workflow, monitors builds, approves publication |
+| **Reviewer** | Reviews changes and provides approval before the release is published |
+
+<Note>
+  Release Lead and Reviewer should be different people when possible. For solo releases, rely on automated checks and document the reason.
+</Note>
+
+## Version numbering
+
+Versions follow `{MAJOR}.{MINOR}.{PATCH}` (e.g., `29.0.4`). The source of truth is `drawio/VERSION` inside the git submodule. Git tags use the prefix `v`: `v29.0.4`. Tags on the main repository trigger the build CI workflows automatically.
+
+## Phase 1: Automated preparation
+
+The `prepare-release` GitHub Actions workflow handles all mechanical preparation steps.
+
+### Pre-release checklist
+
+Before triggering the workflow, verify:
+
+- Release scope is documented (what changes are included)
+- All feature changes are merged to the `dev` branch
+- The target drawio ref exists and has been tested
+
+### Triggering the workflow
+
+<Steps>
+  <Step title="Open the workflow">
+    Go to **Actions → Prepare Release** in the GitHub repository and click **Run workflow**.
+  </Step>
+
+  <Step title="Fill in the inputs">
+    | Input | Description | Required |
+    |---|---|---|
+    | `version` | Release version in `X.Y.Z` format (e.g., `29.0.4`) | Yes |
+    | `previous_version` | Previous version for changelog generation. Leave empty to auto-detect from the latest tag. | No |
+    | `drawio_ref` | Specific tag, branch, or commit in the drawio submodule. Defaults to `v{version}`. | No |
+    | `dry_run` | Check to validate without committing or creating a PR. | No |
+  </Step>
+
+  <Step title="Review the workflow output">
+    The workflow runs these steps in order:
+
+    1. Validates the version string matches `X.Y.Z`
+    2. Checks out the repository with recursive submodules
+    3. Sets up Node.js 24.x
+    4. Updates the drawio submodule to the specified ref (with nested submodule init)
+    5. Updates `package.json` to the new version
+    6. Runs `npm install` (clean install; regenerates `package-lock.json`)
+    7. Generates release notes from a template
+    8. Runs `npm audit` — fails the workflow if any critical or high vulnerabilities are found
+    9. Runs `npm outdated` (informational, does not fail)
+    10. Uploads audit evidence as a workflow artifact
+    11. If not a dry run: commits, creates a `releases/v{VERSION}` branch, pushes it, and opens a PR against `dev`
+  </Step>
+</Steps>
+
+### Evidence produced
+
+The workflow uploads a `release-evidence-v{VERSION}` artifact containing:
+
+- `audit-results.json` — machine-readable audit output
+- `audit-report.txt` — human-readable audit report
+- `outdated-report.txt` — list of outdated dependencies
+- `release-notes.md` — generated release notes
+
+Artifacts are retained for **365 days**.
+
+The job summary also includes a version details table and the audit results table.
+
+## Phase 2: Review the PR
+
+After the workflow creates the pull request:
+
+1. Review the changes: submodule pointer update, `package.json` version bump, and `package-lock.json`
+2. Confirm the audit results in the workflow summary show no critical or high vulnerabilities
+3. Merge the PR into `dev`
+
+## Phase 3: Tag and build
+
+After merging:
+
+```bash
+git checkout dev
+git pull
+git tag -a v{VERSION} -m "Release v{VERSION}"
+git push origin v{VERSION}
+```
+
+Pushing the tag triggers the build workflows automatically:
+
+- `electron-builder.yml` — macOS (x64, arm64, universal) and Linux (x64, arm64)
+- `electron-builder-win.yml` — Windows (x64, 32-bit, ARM64, APPX, portable zip)
+
+Monitor build status in the **Actions** tab. All platform builds must succeed before proceeding.
+
+## Phase 4: Verify and publish
+
+### Reviewer approval checklist
+
+| Check | |
+|---|---|
+| Workflow completed successfully | ☐ |
+| npm audit shows no critical/high vulnerabilities | ☐ |
+| Build workflows passed for all platforms | ☐ |
+| Test cases passed (see below) | ☐ |
+
+### Test cases
+
+Run these against the built application before publishing:
+
+**Critical (must pass)**
+
+| ID | Test | Expected result |
+|---|---|---|
+| T01 | Launch application | Main window displays |
+| T02 | Create new diagram | Blank canvas opens |
+| T03 | Add shapes | Shapes render, move, and resize |
+| T04 | Save file | Saves without error |
+| T05 | Open file | Displays correctly |
+| T06 | Help → About | Shows the correct version |
+
+**Standard**
+
+| ID | Test | Expected result |
+|---|---|---|
+| T07 | Export PNG, PDF, SVG | Valid output produced |
+| T08 | Undo / Redo | Actions reverse correctly |
+
+**Security**
+
+| ID | Check | Method |
+|---|---|---|
+| S01 | No external scripts loaded | DevTools → Network tab |
+| S02 | No data exfiltration during save | Monitor network during save operation |
+
+### Publishing
+
+1. Go to **GitHub Releases** — a draft release with all artifacts will have been created by the build workflows
+2. Verify all platform artifacts are present (Windows builds are automatically signed in CI via the `WIN_CSC_LINK` secret)
+3. Add release notes (see template below)
+4. Obtain Reviewer sign-off
+5. Click **Publish release**
+
+After publishing, the `hash-gen.yml` workflow triggers automatically and uploads `Files-SHA256-Hashes.txt` to the release.
+
+## Release notes template
+
+```markdown
+## v[VERSION] - [DATE]
+
+[Windows Installer](https://github.com/jgraph/drawio-desktop/releases/download/v[VERSION]/draw.io-[VERSION]-windows-installer.exe)
+[Windows No Installer (zip)](https://github.com/jgraph/drawio-desktop/releases/download/v[VERSION]/draw.io-[VERSION]-windows.zip)
+[macOS - Universal](https://github.com/jgraph/drawio-desktop/releases/download/v[VERSION]/draw.io-universal-[VERSION].dmg)
+Linux - [deb](https://github.com/jgraph/drawio-desktop/releases/download/v[VERSION]/drawio-amd64-[VERSION].deb), [AppImage](https://github.com/jgraph/drawio-desktop/releases/download/v[VERSION]/drawio-x86_64-[VERSION].AppImage) or [rpm](https://github.com/jgraph/drawio-desktop/releases/download/v[VERSION]/drawio-x86_64-[VERSION].rpm)
+Windows intel x32 releases are marked -ia32-
+
+**ChangeLog:**
+- Uses electron [ELECTRON_VERSION].
+- Updates to [draw.io core [VERSION]](https://github.com/jgraph/drawio/blob/v[VERSION]/ChangeLog).
+
+### Changes
+- [Change 1]
+- [Change 2]
+
+### Fixes
+- [Fix 1]
+
+### Security
+- Dependencies updated
+
+### Known Issues
+- [If any]
+```
+
+## Rollback procedure
+
+Roll back a release when:
+
+- Critical functionality is broken
+- A security vulnerability is discovered
+- Data loss or corruption occurs
+
+<Steps>
+  <Step title="Convert the release to draft">
+    Go to the release on GitHub and click **Edit**. Change its status from Published to Draft. This removes it from the "Latest release" designation.
+  </Step>
+
+  <Step title="Restore the previous release as Latest">
+    Navigate to the previous release and ensure it is marked as the **Latest release**.
+  </Step>
+
+  <Step title="Notify the team">
+    Inform team members of the rollback and the reason.
+  </Step>
+
+  <Step title="Document the incident">
+    Record the following in the incident log:
+
+    - Version rolled back
+    - Description of the issue
+    - Root cause
+    - Corrective action taken
+    - Completed by / date
+  </Step>
+</Steps>
+
+## Handling build failures
+
+### npm audit fails
+
+1. Review `audit-report.txt` from the workflow artifacts
+2. Options:
+   - Run `npm audit fix` locally, commit, and re-run the workflow
+   - If unfixable, assess risk and document an exception
+   - Delay the release until a fix is available
+
+### Build workflow fails
+
+1. Check the workflow logs for the error
+2. Fix the issue in the codebase
+3. Delete the tag: `git push --delete origin v{VERSION}`
+4. Re-run the `prepare-release` workflow
+
+### Submodule ref not found
+
+Verify the tag or ref exists in the drawio repository. Use the `drawio_ref` workflow input to specify the correct ref explicitly.
+
+## Evidence retention
+
+| Evidence | Location | Retention |
+|---|---|---|
+| Workflow run logs | GitHub Actions | 90 days (GitHub default) |
+| Audit artifacts | Actions → Artifacts | 365 days (configured) |
+| Release assets | GitHub Releases | Permanent |
+| Git tags and commits | Repository | Permanent |
+
+For audits requiring longer retention, download artifacts to secure storage before they expire.

@@ -1,0 +1,77 @@
+---
+title: "File formats"
+description: "Learn about the .drawio and .vsdx file formats supported by draw.io Desktop, including file associations and compression."
+---
+
+draw.io Desktop works with two file formats: its native `.drawio` format and the Microsoft Visio `.vsdx` format.
+
+## .drawio format
+
+`.drawio` is the native file format for draw.io. It is an XML-based format that stores all diagram data including shapes, edges, labels, styles, layers, and pages.
+
+| Property | Value |
+|----------|-------|
+| **Extension** | `.drawio` |
+| **MIME type** | `application/vnd.jgraph.mxfile` |
+| **macOS UTI** | `com.jgraph.drawio` |
+| **Conforms to** | `public.xml`, `public.data` |
+
+### Compressed vs. uncompressed XML
+
+By default, the diagram data within a `.drawio` file is compressed using deflate compression and base64-encoded. This keeps file sizes small but makes the raw XML harder to read in a text editor.
+
+You can export to uncompressed XML using the **Uncompressed** option when exporting to XML format, or by using the `--uncompressed` flag in the CLI. Uncompressed files are easier to diff and inspect in version control.
+
+<Tip>
+  If you store diagrams in a git repository, consider using uncompressed XML to get meaningful diffs between versions.
+</Tip>
+
+### File integrity
+
+draw.io Desktop uses synchronous I/O and verifies written file contents after every save to reduce the risk of file corruption. A backup copy (`.bkp`) is optionally created before overwriting an existing file, and a draft copy (`.dtmp`) is maintained while you have unsaved changes.
+
+## .vsdx format
+
+draw.io Desktop can open Microsoft Visio `.vsdx` files. The application is registered as an **Editor** for `.vsdx` on both macOS and Linux.
+
+| Property | Value |
+|----------|-------|
+| **Extension** | `.vsdx` |
+| **MIME type** | `application/vnd.visio` |
+| **Role** | Editor |
+
+<Note>
+  `.vsdx` is a read/import format. draw.io Desktop can open and convert Visio files, but saves files in the `.drawio` format. Visio-specific features that have no equivalent in draw.io may not import correctly.
+</Note>
+
+## File associations
+
+### Opening files
+
+draw.io Desktop registers itself with the operating system for `.drawio` and `.vsdx` files. You can open a diagram by:
+
+- **Double-clicking** a `.drawio` or `.vsdx` file in Finder (macOS) or File Explorer (Windows/Linux).
+- Dragging a file onto the draw.io Desktop dock icon or taskbar button.
+- Using **File > Open** inside the application.
+- Passing a file path as a CLI argument: `drawio mydiagram.drawio`.
+
+### macOS Quick Look preview
+
+On macOS, draw.io Desktop includes a Quick Look extension. Press **Space** in Finder while a `.drawio` file is selected to see a rendered preview of the diagram without opening the application.
+
+The Quick Look extension uses the draw.io viewer to render the diagram inside a sandboxed `WKWebView`. It works offline — no network connection is required for preview.
+
+## Where files are stored
+
+draw.io Desktop saves diagrams to your local filesystem. The save location is chosen by you via the standard file save dialog.
+
+Application settings and preferences (not diagram files) are stored in:
+
+| Platform | Location |
+|----------|----------|
+| **macOS** | `~/Library/Application Support/draw.io` |
+| **Windows** | `C:\Users\<username>\AppData\Roaming\draw.io\` |
+
+<Note>
+  No diagram data is ever sent to external servers. draw.io Desktop is designed to be fully isolated from the internet, except for checking for application updates on startup.
+</Note>

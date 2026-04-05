@@ -1,0 +1,97 @@
+---
+title: "Security overview"
+description: "How draw.io Desktop keeps your diagrams and your machine secure."
+keywords: ["security", "isolation", "air-gapped", "telemetry", "auto-update", "IPC", "fuses"]
+---
+
+draw.io Desktop is designed around a single guiding principle: your diagram data never leaves your machine. The app runs entirely offline by default, with one intentional exception — checking for updates on startup.
+
+## Internet isolation
+
+All JavaScript that powers the editor is bundled inside the application. The Content Security Policy (CSP) enforces that no remote scripts can run and that the renderer process cannot make outbound network connections. See [Content Security Policy](/security/csp) for the full policy.
+
+The only outbound connection the app makes at runtime is the update check, which contacts `github.com` to compare the current version against the latest release.
+
+## No telemetry or analytics
+
+draw.io Desktop sends no usage analytics and no telemetry. There are no user accounts and no cloud sync. The app has no mechanism for transmitting diagram content externally — this is enforced by the CSP, not just policy.
+
+## Auto-update
+
+On startup, the updater checks `github.com/jgraph/drawio-desktop` for a newer release. If one is found, the binary is downloaded from an AWS S3 bucket owned by GitHub. No diagram data or personal information is included in either request.
+
+<Info>
+Only the latest version receives security updates. Older versions are not supported.
+</Info>
+
+To disable the update check entirely — for example in air-gapped environments — use any of the following:
+
+<Steps>
+  <Step title="Environment variable">
+    Set `DRAWIO_DISABLE_UPDATE=true` before launching the app.
+
+    ```bash
+    DRAWIO_DISABLE_UPDATE=true draw.io
+    ```
+  </Step>
+  <Step title="Command-line flag">
+    Pass `--disable-update` when launching the app.
+
+    ```bash
+    draw.io --disable-update
+    ```
+  </Step>
+  <Step title="Flatpak sandbox">
+    When running inside a Flatpak sandbox, the app detects `/.flatpak-info` and disables updates automatically. No manual configuration is needed.
+  </Step>
+</Steps>
+
+## Electron security hardening
+
+### webPreferences
+
+Every browser window is created with the following security settings:
+
+| Setting | Value | Effect |
+|---|---|---|
+| `contextIsolation` | `true` | Renderer code runs in a separate context from the preload script |
+| `webSecurity` | `true` | Same-origin policy is enforced |
+| `webviewTag` | `false` | The `<webview>` element is disabled |
+| `nodeIntegration` | not enabled | Node.js APIs are not exposed to the renderer |
+
+### IPC origin validation
+
+Every IPC message from the renderer is validated before being processed. The `validateSender` function checks that the sender frame's URL starts with the app's own code directory (`drawio/src/main/webapp`). Messages from any other origin are silently dropped.
+
+```javascript
+// src/main/electron.js
+function validateSender(frame) {
+    return frame.url
+        .replace(/\/.\:\//, str => str.toUpperCase())
+        .startsWith(codeUrl);
+}
+```
+
+### Electron fuses
+
+Security fuses are applied at build time to harden the compiled binary:
+
+| Fuse | State | Effect |
+|---|---|---|
+| `RunAsNode` | disabled | Prevents `ELECTRON_RUN_AS_NODE` from bypassing the app |
+| `EnableCookieEncryption` | enabled | Cookies are encrypted on disk |
+| `EnableNodeOptionsEnvironmentVariable` | disabled | `NODE_OPTIONS` cannot inject code |
+| `EnableNodeCliInspectArguments` | disabled | `--inspect` and `--inspect-brk` flags are blocked |
+| `OnlyLoadAppFromAsar` | enabled | The app only loads code from `app.asar` |
+
+### File request blocking
+
+All `file://` requests are intercepted. Only files within the app's own code directory are allowed through. When plugins are disabled (the default), requests to the plugins directory are also blocked. Any other file path is cancelled before it loads.
+
+## Reporting a vulnerability
+
+Report security vulnerabilities through the [huntr disclosure page](https://huntr.dev/repos/jgraph/drawio-desktop/). Bounty eligibility, CVE assignment, response times, and past reports are all available there.
+
+<Warning>
+Only the latest release is supported. If you discover a vulnerability in an older version, please verify it against the latest release before reporting.
+</Warning>

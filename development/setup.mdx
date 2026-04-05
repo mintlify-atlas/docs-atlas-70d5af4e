@@ -1,0 +1,98 @@
+---
+title: "Development setup"
+description: "Set up a local development environment for draw.io Desktop."
+---
+
+<Warning>
+  draw.io Desktop is **closed to contributions**. PRs are not accepted unless a maintainer explicitly permits it, which is extremely rare. This guide is for internal use and reference only.
+</Warning>
+
+## Prerequisites
+
+- **Node.js 20+** (see `.nvmrc` — the project pins Node 20)
+- **Git**
+- **npm** (bundled with Node.js)
+
+## Setup
+
+<Steps>
+  <Step title="Clone the repository recursively">
+    The draw.io editor is included as a **git submodule**. A regular clone will leave the `drawio/` directory empty and the app will not start.
+
+    ```bash
+    git clone --recursive https://github.com/jgraph/drawio-desktop.git
+    cd drawio-desktop
+    ```
+
+    <Warning>
+      Always use `--recursive`. Forgetting it is the most common setup mistake. If you already cloned without it, run `git submodule update --init --recursive` to fix it.
+    </Warning>
+  </Step>
+
+  <Step title="Install dependencies">
+    ```bash
+    npm install
+    ```
+
+    This installs all runtime and dev dependencies declared in `package.json`.
+  </Step>
+
+  <Step title="Run the app">
+    ```bash
+    npm start
+    ```
+
+    This launches the Electron application. The draw.io editor loads from `drawio/src/main/webapp/index.html`.
+  </Step>
+</Steps>
+
+## Development mode
+
+Set the `DRAWIO_ENV=dev` environment variable to enable development mode. This automatically opens the Chromium DevTools in every window on startup.
+
+```bash
+DRAWIO_ENV=dev npm start
+```
+
+For verbose Electron/Chromium logging, append `--enable-logging`:
+
+```bash
+npm start --enable-logging
+```
+
+<Tip>
+  Main process output goes to the terminal. Renderer process output (from the draw.io web app) appears in the DevTools console.
+</Tip>
+
+## Using a symlink instead of the submodule
+
+If you point `drawio/` at a local clone of the draw.io editor via a symlink rather than initializing the submodule, you must **also** symlink the `node_modules` directory:
+
+```bash
+# From the drawio-desktop root
+ln -s /path/to/drawio drawio
+ln -s /path/to/drawio/node_modules drawio/src/main/webapp/node_modules
+```
+
+Without the second symlink the renderer will fail to resolve modules that the web app depends on.
+
+## Syncing the version
+
+The canonical version is stored in `drawio/VERSION` (the submodule), not in `package.json`. Before building a release, sync the version:
+
+```bash
+npm run sync
+```
+
+This runs `sync.cjs`, which reads `drawio/VERSION` and updates `package.json` accordingly. You do not need to run this for day-to-day development — only before cutting a build.
+
+## Data storage locations
+
+App settings and local storage are written to the OS-standard application data folder:
+
+| Platform | Path |
+|----------|------|
+| macOS    | `~/Library/Application Support/draw.io` |
+| Windows  | `C:\Users\<USER>\AppData\Roaming\draw.io\` |
+
+Persistent settings (spell check, backup preferences, etc.) are managed by `electron-store` and land in the same directory.

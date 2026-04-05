@@ -1,0 +1,234 @@
+---
+title: "CI/CD workflows"
+description: "GitHub Actions workflows that build, sign, and publish draw.io Desktop releases."
+---
+
+draw.io Desktop uses five GitHub Actions workflows. Two are triggered by version tags and produce signed release artifacts; one automates release preparation; one generates checksums after a release is published; and one manages stale issues.
+
+## Workflow overview
+
+<CardGroup cols={2}>
+  <Card title="electron-builder.yml" icon="apple">
+    Triggered by `v*` tags. Builds macOS and Linux on `ubuntu-latest` and `macos-latest`.
+  </Card>
+  <Card title="electron-builder-win.yml" icon="windows">
+    Triggered by `v*` tags. Builds all Windows targets on `windows-latest`.
+  </Card>
+  <Card title="prepare-release.yml" icon="gear">
+    Manual trigger. Automates submodule update, version bump, audit, and PR creation.
+  </Card>
+  <Card title="hash-gen.yml" icon="lock">
+    Triggered when a release is published. Generates SHA-256 checksums for all release assets.
+  </Card>
+</CardGroup>
+
+---
+
+## electron-builder.yml
+
+**Trigger:** `push` on tags matching `v*`
+
+**Runners:** `ubuntu-latest` and `macos-latest` (matrix)
+
+This workflow builds macOS DMG/ZIP archives and Linux AppImage, deb, and RPM packages. On Ubuntu, it also builds the Snap package.
+
+### Steps
+
+1. Check out the repository with submodules
+2. Check out the private `jgraph/drawio-dev` repository at the `release` branch
+3. Derive the drawio build tag from the Git ref (e.g., `refs/tags/v29.0.4` → `refs/tags/diagramly-29_0_4`) and fetch the corresponding minified JS files from `drawio-dev`
+4. Copy `*.min.js` into `drawio/src/main/webapp/js/`
+5. On macOS only: save `viewer-static.min.js` to `build/viewer-static.min.js` for use by the Quick Look extension in `notarize.mjs`
+6. Remove unused submodule directories (`docs`, `etc`, `src/main/java`, service workers, and heavy JS bundles)
+7. Install Node.js 24.x
+8. Install system packages on Ubuntu (`icnsutils graphicsmagick xz-utils rpm`)
+9. Run `npm ci`
+10. On Ubuntu: patch `productName` in `electron-builder-linux-mac.json` to `drawio` (removes the `.` for the executable name)
+11. Run `npm run sync`
+12. Run `npm run release-linux` (builds Linux targets on Ubuntu, macOS targets on macOS)
+13. On Ubuntu: install `snapcraft`, run `npm run release-snap`, and push to the Snapcraft edge channel
+
+### Secrets used
+
+| Secret | Purpose |
+|---|---|
+| `GH_TOKEN` | Access to the private `drawio-dev` repository and uploading release artifacts |
+| `CSC_LINK` | macOS code signing certificate (base64 `.p12`) |
+| `CSC_KEY_PASSWORD` | macOS certificate password |
+| `APPLEID` | Apple ID for notarization |
+| `APPLEIDPASS` | App-specific password for notarization |
+| `APPLE_TEAM_ID` | Apple Developer Team ID for notarization |
+| `SNAP_TOKEN` | Snapcraft store credentials |
+
+### macOS post-build hooks
+
+Two hooks run after packaging:
+
+- **`build/fuses.cjs`** (`afterPack`): flips Electron security fuses in the binary
+- **`build/notarize.mjs`** (`afterSign`): assembles the Quick Look `.appex`, signs it with sandbox entitlements, re-signs the outer `.app`, and submits to Apple's notary service via `notarytool`
+
+---
+
+## electron-builder-win.yml
+
+**Trigger:** `push` on tags matching `v*`
+
+**Runner:** `windows-latest`
+
+This workflow builds all Windows targets: x64 NSIS installer and MSI, 32-bit NSIS installer, ARM64 NSIS installer and portable, APPX for the Windows Store, and a portable ZIP.
+
+### Steps
+
+1. Check out the repository with submodules
+2. Check out `jgraph/drawio-dev` at the `release` branch
+3. Derive the drawio build tag and fetch the corresponding minified JS (PowerShell equivalent of the Linux step)
+4. Copy `*.min.js` into `drawio\src\main\webapp\js\`
+5. Remove unused submodule directories
+6. Install Node.js 24.x
+7. Run `npm ci`
+8. **Build 32-bit and ARM64** (with `disableUpdate` so these builds do not overwrite the `latest.yml` used by the x64 auto-updater):
+   ```powershell
+   npm run sync -- disableUpdate
+   npm run release-win32
+   npm run release-win-arm64
+   ```
+9. **Build x64** (re-enables auto-update):
+   ```powershell
+   npm run sync
+   npm run release-win
+   ```
+10. **Build portable ZIP** (x64, unpacked, with `disableUpdate`):
+    ```powershell
+    npm run sync -- disableUpdate
+    npx electron-builder --win --x64 --dir
+    ```
+    Then zip `dist/win-unpacked/` into `draw.io-{version}-windows.zip` using 7-Zip
+11. **Build APPX** (with `disableUpdate`):
+    ```powershell
+    npm run sync -- disableUpdate
+    npm run release-appx
+    ```
+12. Install GitHub CLI and upload the portable ZIP to the draft release
+
+### Secrets used
+
+| Secret | Purpose |
+|---|---|
+| `GH_TOKEN` | Access to `drawio-dev` and uploading release artifacts |
+| `WIN_CSC_LINK` | Windows code signing certificate |
+| `WIN_CSC_KEY_PASSWORD` | Windows certificate password |
+
+<Note>
+  The 32-bit and ARM64 builds run with `disableUpdate` to prevent their `latest.yml` files from overwriting the x64 `latest.yml`. The x64 build runs last so its `latest.yml` is the one that ends up in the release.
+</Note>
+
+---
+
+## prepare-release.yml
+
+**Trigger:** `workflow_dispatch` (manual)
+
+**Runner:** `ubuntu-latest`
+
+This workflow automates all mechanical steps needed before a release. It does not build binaries — it prepares the repository and opens a PR.
+
+### Inputs
+
+| Input | Type | Default | Description |
+|---|---|---|---|
+| `version` | string | — | Release version in `X.Y.Z` format (required) |
+| `previous_version` | string | auto-detect | Previous version for changelog. Auto-detected from the latest git tag if empty. |
+| `drawio_ref` | string | `v{version}` | Tag, branch, or commit in the drawio submodule |
+| `dry_run` | boolean | `false` | Validate only; do not commit or create a PR |
+
+### What the workflow does
+
+1. Validates the version string against `^[0-9]+\.[0-9]+\.[0-9]+$`
+2. Checks out the repository with recursive submodules and full history (`fetch-depth: 0`)
+3. Sets up Node.js 24.x
+4. Updates the drawio submodule to the specified ref
+5. Writes the version into `package.json` using `jq`
+6. Runs `rm -rf node_modules package-lock.json && npm install` to produce a clean `package-lock.json` with all resolved URLs and integrity hashes (required for offline builds such as Flatpak)
+7. Generates `release-notes.md` from a template, filling in the version, Electron version (read from `package-lock.json`), and previous version
+8. Runs `npm audit --json` and fails if any critical or high vulnerabilities are found
+9. Runs `npm outdated` (informational)
+10. Uploads `audit-results.json`, `audit-report.txt`, `outdated-report.txt`, and `release-notes.md` as the `release-evidence-v{VERSION}` artifact (retained for 365 days)
+11. If `dry_run` is false:
+    - Creates branch `releases/v{VERSION}`
+    - Commits the submodule update, `package.json`, and `package-lock.json`
+    - Pushes the branch
+    - Opens a PR against `dev` with the release notes as the PR body
+
+### Required permissions
+
+The workflow requires `contents: write` and `pull-requests: write` on the `GITHUB_TOKEN`.
+
+### Dry run mode
+
+When `dry_run` is checked, the workflow runs all validation and audit steps but skips the commit, push, and PR creation. Use this to verify a version is safe to release before committing.
+
+---
+
+## hash-gen.yml
+
+**Trigger:** `release` event, type `published`
+
+**Runner:** `ubuntu-latest`
+
+This workflow runs automatically whenever a release is published. It generates SHA-256 checksums for all release assets and uploads the result as `Files-SHA256-Hashes.txt`.
+
+### Steps
+
+1. Generate SHA-256 hashes for all release files using `MCJack123/ghaction-generate-release-hashes@v1`
+2. Upload `hashes.txt` to the release as `Files-SHA256-Hashes.txt` using `svenstaro/upload-release-action@v2`
+
+No secrets beyond the default `GITHUB_TOKEN` are required.
+
+---
+
+## stale.yml
+
+**Trigger:** Daily cron at `03:42 UTC`
+
+**Runner:** `ubuntu-latest`
+
+Manages stale issues and pull requests using `actions/stale@v5`.
+
+| Setting | Value |
+|---|---|
+| Days before marking stale | 250 |
+| Days before closing after stale | 14 |
+| Stale label | `wontfix` |
+| Close label | `declined` |
+| Exempt label | `notstale` |
+
+The stale message links to the [Stale bot FAQ](https://github.com/jgraph/drawio/wiki/Stale-bot-FAQ) in the drawio wiki.
+
+---
+
+## Required secrets reference
+
+| Secret | Used by | Purpose |
+|---|---|---|
+| `GH_TOKEN` | `electron-builder.yml`, `electron-builder-win.yml`, `prepare-release.yml` | Access to the private `drawio-dev` repository and uploading artifacts to GitHub Releases |
+| `CSC_LINK` | `electron-builder.yml` | macOS code signing certificate |
+| `CSC_KEY_PASSWORD` | `electron-builder.yml` | macOS certificate password |
+| `APPLEID` | `electron-builder.yml` | Apple ID for notarization |
+| `APPLEIDPASS` | `electron-builder.yml` | App-specific password for notarization |
+| `APPLE_TEAM_ID` | `electron-builder.yml` | Apple Developer Team ID |
+| `SNAP_TOKEN` | `electron-builder.yml` | Snapcraft store credentials |
+| `WIN_CSC_LINK` | `electron-builder-win.yml` | Windows code signing certificate |
+| `WIN_CSC_KEY_PASSWORD` | `electron-builder-win.yml` | Windows certificate password |
+
+<Note>
+  `GH_TOKEN` in the build workflows refers to the repository secret (a PAT with access to `drawio-dev`), not the automatic `GITHUB_TOKEN`. The `GITHUB_TOKEN` is used separately for uploading release artifacts via `secrets.GITHUB_TOKEN`.
+</Note>
+
+## Evidence retention
+
+| Evidence | Location | Retention |
+|---|---|---|
+| Workflow run logs | GitHub Actions | 90 days (GitHub default) |
+| Audit artifacts (`release-evidence-v*`) | Actions → Artifacts | 365 days (configured in `prepare-release.yml`) |
+| Release assets | GitHub Releases | Permanent |
+| Git tags and commits | Repository | Permanent |

@@ -1,0 +1,110 @@
+---
+title: "Content Security Policy"
+description: "The CSP that draw.io Desktop applies to every page, and what each directive does."
+keywords: ["CSP", "Content Security Policy", "security", "script-src", "connect-src", "Google Fonts"]
+---
+
+draw.io Desktop enforces a Content Security Policy (CSP) on every response via Electron's `session.defaultSession.webRequest.onHeadersReceived` hook. The policy is set in the main process — it does not rely on meta tags in HTML, so it cannot be overridden by page content.
+
+## The policy
+
+The full CSP applied by default (Google Fonts disabled):
+
+```http
+default-src 'self';
+script-src 'self';
+connect-src 'self';
+img-src * data:;
+media-src *;
+font-src * data:;
+frame-src 'self';
+style-src 'self' 'unsafe-inline';
+base-uri 'none';
+child-src 'self';
+object-src 'none';
+```
+
+When [Google Fonts is enabled](/configuration/google-fonts), two directives expand:
+
+```http
+connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com;
+style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+```
+
+## Directive reference
+
+<AccordionGroup>
+  <Accordion title="default-src 'self'">
+    The fallback for any resource type not explicitly listed. `'self'` means only files served from the same origin as the page — in practice, files bundled inside the app. Remote resources are blocked by default.
+  </Accordion>
+
+  <Accordion title="script-src 'self'">
+    JavaScript may only be loaded from the app itself. Remote scripts — whether from CDNs, external APIs, or anywhere else — are blocked. This is the most important directive for preventing code injection.
+  </Accordion>
+
+  <Accordion title="connect-src 'self'">
+    `fetch`, `XMLHttpRequest`, WebSockets, and EventSource connections are restricted to the app's own origin. The renderer process cannot make outbound network calls.
+
+    When Google Fonts is enabled, `https://fonts.googleapis.com` and `https://fonts.gstatic.com` are added so the font metadata and font files can be fetched.
+  </Accordion>
+
+  <Accordion title="img-src * data:">
+    Images may be loaded from any source, including `data:` URIs. This permissive setting is necessary because diagrams can embed images from arbitrary URLs or as inline data URIs.
+  </Accordion>
+
+  <Accordion title="media-src *">
+    Media resources (audio, video) may be loaded from any source. This supports embedded media in diagrams.
+  </Accordion>
+
+  <Accordion title="font-src * data:">
+    Fonts may be loaded from any source, including `data:` URIs. Diagrams can use custom fonts embedded as data URIs or referenced from external URLs.
+  </Accordion>
+
+  <Accordion title="frame-src 'self'">
+    Only frames from the app's own origin are allowed. This prevents the renderer from embedding third-party iframes.
+  </Accordion>
+
+  <Accordion title="style-src 'self' 'unsafe-inline'">
+    Stylesheets may be loaded from the app itself, and inline `style` attributes are permitted. `'unsafe-inline'` is required because the diagram renderer applies styles dynamically at runtime.
+
+    When Google Fonts is enabled, `https://fonts.googleapis.com` is added for stylesheet loading.
+  </Accordion>
+
+  <Accordion title="base-uri 'none'">
+    The `<base>` element is disallowed entirely. This prevents an attacker from redirecting all relative URLs on the page to an external host.
+  </Accordion>
+
+  <Accordion title="child-src 'self'">
+    Worker and nested browsing contexts are limited to the app's own origin.
+  </Accordion>
+
+  <Accordion title="object-src 'none'">
+    `<object>`, `<embed>`, and `<applet>` elements are blocked. This prevents loading plugins or Flash-style content.
+  </Accordion>
+</AccordionGroup>
+
+## The config-editor exception
+
+The CSP is skipped for `config-editor.html`. This page is used to edit the application configuration and is intentionally excluded from the policy so it can render without restriction:
+
+```javascript
+if (details.url.indexOf('config-editor.html') >= 0) {
+  callback({ responseHeaders: details.responseHeaders });
+  return;
+}
+```
+
+All other pages — including the main editor — have the full policy applied.
+
+## Google Fonts
+
+Google Fonts support is disabled by default. Enabling it (via **Extras → Edit Diagram → Google Fonts** or the settings store) adds two external origins to the policy:
+
+- `https://fonts.googleapis.com` is added to `connect-src` and `style-src`
+- `https://fonts.gstatic.com` is added to `connect-src`
+
+This is the only way external network access is permitted in the renderer. See [Google Fonts](/configuration/google-fonts) for how to enable it.
+
+<Note>
+Even with Google Fonts enabled, `script-src` remains `'self'`. No remote JavaScript is ever permitted.
+</Note>

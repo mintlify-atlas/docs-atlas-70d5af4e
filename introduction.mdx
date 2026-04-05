@@ -1,0 +1,55 @@
+---
+title: "Introduction"
+description: "draw.io Desktop is a free, offline-first diagramming app built on Electron, wrapping the core draw.io editor."
+---
+
+draw.io Desktop is a free desktop application for creating flowcharts, UML diagrams, network diagrams, org charts, and more. It is built on [Electron](https://electronjs.org/) and wraps the [core draw.io editor](https://github.com/jgraph/drawio) as a git submodule. All diagram data stays on your machine — nothing is transmitted to external servers.
+
+## Key features
+
+<CardGroup cols={2}>
+  <Card title="Offline-first" icon="wifi-slash">
+    Works entirely without an internet connection. The only outbound connection is an optional check for updates at startup.
+  </Card>
+  <Card title="Cross-platform" icon="display">
+    Runs on macOS (Intel and Apple Silicon), Windows (x64 and ARM64), and Linux (x86-64 and ARM64).
+  </Card>
+  <Card title=".drawio and .vsdx support" icon="file-code">
+    Opens and saves native `.drawio` files and can open `.vsdx` (Microsoft Visio) files.
+  </Card>
+  <Card title="Quick Look on macOS" icon="eye">
+    Press Space in Finder to preview a `.drawio` file without opening the app. Powered by a bundled Quick Look App Extension.
+  </Card>
+  <Card title="CLI export" icon="terminal">
+    Export diagrams to PDF, PNG, JPG, SVG, HTML, or XML from the command line using the `-x` flag.
+  </Card>
+  <Card title="Plugin system" icon="puzzle-piece">
+    Load custom plugins from your local machine. Plugins are disabled by default and must be opted in.
+  </Card>
+</CardGroup>
+
+## Architecture
+
+draw.io Desktop is an Electron application. The main process (`src/main/electron.js`) handles window management, file I/O, menus, auto-update, and CLI export. The renderer process loads the draw.io web application from a local file path — no web server is involved.
+
+A preload script (`src/main/electron-preload.js`) bridges the renderer and main process using Electron's `contextBridge`, exposing only a narrow, validated API surface. All IPC calls are validated to ensure they originate from the local draw.io code.
+
+The draw.io editor itself lives in a `drawio/` git submodule, which is the same codebase that powers the web application at draw.io.
+
+## What draw.io Desktop is not
+
+<Warning>
+  draw.io Desktop does not accept external contributions. Pull requests are not reviewed or merged. The project is maintained exclusively by JGraph.
+</Warning>
+
+<Info>
+  No diagram data, usage analytics, or telemetry is ever sent to external servers. A Content Security Policy is enforced on the renderer to make external transmission impossible, even accidentally.
+</Info>
+
+The app is licensed under [Apache 2.0](https://github.com/jgraph/drawio-desktop/blob/master/LICENSE). You can use it freely for any purpose without modifying the code.
+
+## Ready to install?
+
+<Card title="Installation" icon="download" href="/installation">
+  Download draw.io Desktop for your platform and get set up in minutes.
+</Card>

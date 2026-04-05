@@ -1,0 +1,137 @@
+---
+title: "Creating diagrams"
+description: "Learn how to create and edit diagrams in draw.io Desktop using the canvas, shape libraries, layers, and pages."
+---
+
+draw.io Desktop opens to a blank canvas where you can build flowcharts, UML diagrams, network maps, org charts, and more. All editing happens locally — nothing is sent to external servers.
+
+## Starting a new diagram
+
+When you launch draw.io Desktop, a new blank diagram opens automatically. To create another one, go to **File > New**.
+
+Each diagram window is independent. You can open multiple windows to work on several files at the same time.
+
+## Working with shapes
+
+The shape library appears in the left panel. It contains categorized shape collections including general shapes, flowchart symbols, UML, network icons, and more.
+
+**To add a shape to the canvas:**
+
+<Steps>
+  <Step title="Find a shape">
+    Browse the shape panel or use the search box at the top of the panel to find a shape by name.
+  </Step>
+  <Step title="Place the shape">
+    Drag a shape from the panel onto the canvas, or double-click it to place it at the center.
+  </Step>
+  <Step title="Resize and reposition">
+    Click a shape to select it. Drag the blue handles to resize it, or drag the shape body to reposition it.
+  </Step>
+</Steps>
+
+<Tip>
+  You can also double-click an empty area of the canvas to open a shape picker.
+</Tip>
+
+## Connecting shapes
+
+Edges (arrows and lines) connect shapes to show relationships.
+
+**To connect two shapes:**
+
+1. Hover over the source shape until blue connection points appear on its edges.
+2. Click and drag from a connection point to the target shape.
+3. Release over the target shape to create the connection.
+
+Edges snap to connection points automatically. You can drag an edge's endpoint to reconnect it to a different shape.
+
+## Adding labels and text
+
+Every shape and edge can have a label.
+
+- **Shape label:** Double-click a shape to enter edit mode and type your label.
+- **Edge label:** Double-click an edge to add a label in the middle of the line.
+- **Standalone text:** Double-click an empty area of the canvas and select the text shape.
+
+Use the format panel on the right to change font, size, alignment, and color while a shape or label is selected.
+
+## Multi-page diagrams
+
+draw.io supports multiple pages within a single `.drawio` file. Page tabs appear at the bottom of the canvas, similar to spreadsheet tabs.
+
+<Steps>
+  <Step title="Add a page">
+    Click the **+** button at the bottom-left of the canvas to add a new page.
+  </Step>
+  <Step title="Switch between pages">
+    Click a page tab to switch to it.
+  </Step>
+  <Step title="Rename a page">
+    Double-click a page tab to rename it.
+  </Step>
+  <Step title="Reorder pages">
+    Drag a page tab left or right to change its position.
+  </Step>
+</Steps>
+
+<Note>
+  When exporting to PDF or HTML, you can choose to include all pages or a specific page range.
+</Note>
+
+## Working with layers
+
+Layers let you organize diagram elements into groups that can be shown, hidden, or locked independently.
+
+Open the **View > Layers** panel to manage layers. From the panel you can:
+
+- Add a new layer with the **+** button.
+- Toggle a layer's visibility using the eye icon.
+- Lock a layer to prevent editing its contents.
+- Move selected shapes to a different layer using the **Move to layer** option.
+
+Layers are stored within the `.drawio` file and are preserved across saves.
+
+## Undo and redo
+
+Use standard keyboard shortcuts to move through your edit history:
+
+| Action | macOS | Windows / Linux |
+|--------|-------|-----------------|
+| Undo   | `Cmd+Z` | `Ctrl+Z` |
+| Redo   | `Cmd+Shift+Z` | `Ctrl+Shift+Z` |
+
+The Edit menu also exposes **Undo** and **Redo** actions.
+
+## Zoom and pan
+
+<Tabs>
+  <Tab title="Keyboard">
+    | Action | Shortcut |
+    |--------|----------|
+    | Zoom in | `Ctrl++` |
+    | Zoom out | `Ctrl+-` |
+    | Actual size (100%) | `Ctrl+Shift+H` |
+    | Fit page | `Ctrl+Shift+F` |
+  </Tab>
+  <Tab title="Mouse / trackpad">
+    - **Scroll wheel**: zoom in and out.
+    - **Middle-click and drag**: pan the canvas.
+    - **Two-finger pinch** (trackpad): zoom in and out.
+    - **Two-finger scroll** (trackpad): pan the canvas.
+  </Tab>
+  <Tab title="App zoom">
+    Use **Actual Size**, **Zoom In**, and **Zoom Out** in the application menu (macOS) to scale the entire application interface, not just the diagram.
+  </Tab>
+</Tabs>
+
+## Saving and opening files
+
+**Save:** Go to **File > Save** (`Cmd+S` / `Ctrl+S`). The first save on a new diagram prompts you to choose a location and filename. Files are saved in the `.drawio` format.
+
+**Save As:** Go to **File > Save As** to save a copy of the current diagram with a new name or location.
+
+**Open:** Go to **File > Open** (`Cmd+O` / `Ctrl+O`) to browse for a `.drawio` or `.vsdx` file. You can also double-click a `.drawio` file in Finder or File Explorer to open it directly in draw.io Desktop.
+
+<Note>
+  draw.io Desktop saves files to your local filesystem only. No diagram data is ever uploaded to external servers.
+</Note>

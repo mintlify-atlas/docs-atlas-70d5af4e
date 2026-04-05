@@ -1,0 +1,70 @@
+---
+title: "Data privacy"
+description: "What draw.io Desktop stores, what it sends, and what stays entirely on your machine."
+keywords: ["privacy", "data", "telemetry", "analytics", "local storage", "file access", "flatpak"]
+---
+
+draw.io Desktop stores all diagram data locally. Nothing about your diagrams, your usage, or your identity is transmitted anywhere.
+
+## What stays on your machine
+
+<CardGroup cols={2}>
+  <Card title="Diagram files" icon="file">
+    All `.drawio` files are read from and written to your local filesystem. The app never uploads, syncs, or caches them externally.
+  </Card>
+  <Card title="No telemetry" icon="chart-bar">
+    There is no usage analytics, crash reporting, or telemetry of any kind. The app has no code paths that send usage data outbound.
+  </Card>
+  <Card title="No accounts" icon="user">
+    draw.io Desktop has no concept of user accounts, sign-in, or cloud sync. There is nothing to log into and no profile to create.
+  </Card>
+  <Card title="App settings" icon="gear">
+    Application preferences (window size, zoom level, spell check, etc.) are stored locally using `electron-store`, in the platform-specific app data directory.
+  </Card>
+</CardGroup>
+
+## Local storage locations
+
+Application settings and session data are stored in the platform app data directory:
+
+| Platform | Path |
+|---|---|
+| macOS | `~/Library/Application Support/draw.io` |
+| Windows | `%APPDATA%\draw.io\` |
+
+Diagram files themselves are stored wherever you choose to save them — the app does not manage a central diagram library.
+
+## Auto-update data
+
+The only outbound network activity draw.io Desktop performs is the version check at startup. Here is exactly what happens:
+
+<Steps>
+  <Step title="Version check">
+    The updater contacts `github.com/jgraph/drawio-desktop` to retrieve the latest release metadata. The request includes the current app version for comparison. No diagram data or personal information is sent.
+  </Step>
+  <Step title="Binary download (if an update is available)">
+    If a newer version exists, the update binary is downloaded from an AWS S3 bucket owned by GitHub. Again, no user or diagram data is included in the request.
+  </Step>
+</Steps>
+
+You can disable this entirely. See [Security overview — auto-update](/security/overview#auto-update) for how to turn it off via environment variable, command-line flag, or Flatpak sandbox detection.
+
+## File access
+
+draw.io Desktop uses Electron's file dialog to open and save files. The app can only read or write files that you explicitly select through the dialog. There is no background file scanning or indexing.
+
+All `file://` requests are additionally intercepted at the session level. Only files from within the app's own bundled code directory are permitted to load automatically. Any request to a file outside that directory — including files on your desktop or in your documents folder — is cancelled before it reaches the renderer. When plugins are enabled, files from the plugins directory are also allowed through.
+
+## Plugins
+
+Plugins are disabled by default. When enabled via the `--enable-plugins` flag, plugins are loaded from the `plugins/` subdirectory inside the app data folder. A plugin is a local JavaScript file — it runs with access to the local filesystem through the same file-loading mechanism as the rest of the app.
+
+<Warning>
+Only install plugins from sources you trust. A plugin has the same file access as the application itself.
+</Warning>
+
+Plugins do not change the CSP. Remote scripts remain blocked regardless of whether plugins are enabled.
+
+## Flatpak sandbox
+
+When draw.io Desktop is run inside a Flatpak sandbox, the presence of `/.flatpak-info` is detected at startup. The auto-updater is automatically disabled, since Flatpak manages application updates through its own channels. No other behavior changes.
